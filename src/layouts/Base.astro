@@ -12,6 +12,7 @@ interface Props { title: string; description: string; jsonld?: object[]; current
 const { title, description, jsonld = [], current, wide = false } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const canonical = new URL(Astro.url.pathname, Astro.site);
+const year = new Date().getFullYear();
 ---
 <!doctype html>
 <html lang="en">
@@ -58,7 +59,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
 
   <footer class="site">
     <div class="foot">
-      <span>MIT © Kostas Karasavvas · Not financial advice</span>
+      <span>© {year} <a class="foot-name" href="https://kkarasavvas.com">Kostas Karasavvas</a> · MIT licensed · Not financial advice</span>
       <nav aria-label="Footer"><a href={`${base}privacy/`}>Privacy</a><a href={`${base}about/`}>About</a><a href={REPO}>GitHub</a></nav>
     </div>
   </footer>
