@@ -98,3 +98,34 @@ describe('BOLT11 invalid vectors', () => {
   it('sub-msat precision', () => expect(() => decodeBolt11(BAD_PICO)).toThrow(/precision|amount/i));
   it('too short', () => expect(() => decodeBolt11('lnbc1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpl2pkx2ctnv5sxxmmwwd5kgetjypeh2ursdae8g6na6hlh')).toThrow());
 });
+
+import { bech32 } from '@scure/base';
+describe('BOLT11 signature tamper', () => {
+  it('flags an altered invoice with a valid checksum as invalid signature', () => {
+    const { prefix, words } = bech32.decode(DONATION as `${string}1${string}`, 10000);
+    const w = [...words];
+    w[10] = (w[10] + 1) % 32; // alter a data word (inside the payment secret field)
+    const altered = bech32.encode(prefix, w, 10000);
+    const d = decodeBolt11(altered);
+    // Without an n field, tampering changes the recovered payee rather than failing.
+    expect(d.signatureStatus).toBe('recovered');
+    expect(d.payee).not.toBe(PAYEE);
+  });
+});
+
+describe('BOLT11 n field', () => {
+  it('high-S signature with n field is rejected (spec invalid vector)', () => {
+    const d = decodeBolt11('lnbc25m1p70xwfzpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpl2pkx2ctnv5sxxmmwwd5kgetjypeh2ursdae8g6twvus8g6rfwvs8qun0dfjkxaqnp4q0n326hr8v9zprg8gsvezcch06gfaqqhde2aj730yg0durunfhv66sp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygs9qrsgqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsp5cfzp9ugllvk03rltd6hvndxj26ux6gcxc5azyxk060rj9tzghct5zvjlps76gx8wpq5yuu79688k8gnm2c0al6v608s96l0xzrrlqqwnzxmu');
+    expect(d.signatureStatus).toBe('invalid');
+  });
+  it('high-S without n still recovers the right payee (spec vector)', () => {
+    const d = decodeBolt11('lnbc1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpl2pkx2ctnv5sxxmmwwd5kgetjypeh2ursdae8g6twvus8g6rfwvs8qun0dfjkxaq9qrsgq357wnc5r2ueh7ck6q93dj32dlqnls087fxdwk8qakdyafkq3yap2r09nt4ndd0unm3z9u5t48y6ucv4r5sg7lk98c77ctvjczkspk5qprc90gx');
+    expect(d.payee).toBe(PAYEE);
+    expect(d.signatureStatus).toBe('recovered');
+  });
+  it('unrecoverable signature is invalid (spec invalid vector)', () => {
+    let st: string;
+    try { st = decodeBolt11('lnbc2500u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpusp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygs9qrsgqwgt7mcn5yqw3yx0w94pswkpq6j9uh6xfqqqtsk4tnarugeektd4hg5975x9am52rz4qskukxdmjemg92vvqz8nvmsye63r5ykel43pgz7zq0g2').signatureStatus; } catch { st = 'invalid'; }
+    expect(st).toBe('invalid');
+  });
+});

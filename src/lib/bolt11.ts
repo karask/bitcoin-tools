@@ -33,6 +33,10 @@ export interface Bolt11Invoice {
   descriptionHash: string | null;
   paymentSecret: string | null;
   payee: string | null;
+  /** 'verified' = checked against the invoice's own n field; 'recovered' = payee key recovered
+   *  from the signature (well-formed, but tampering would only change the recovered key);
+   *  'invalid' = malformed or failed verification. */
+  signatureStatus: 'verified' | 'recovered' | 'invalid';
   signatureValid: boolean;
   minFinalCltvExpiry: number;
   fallbackAddress: string | null;
@@ -131,37 +135,44 @@ function parseRouteHint(bytes: Uint8Array): RouteHintHop[] {
   return hops;
 }
 
-function recoverPayee(hrp: string, dataWordsNoSig: number[], sigWords: number[], expected?: string): { payee: string | null; valid: boolean } {
-  if (sigWords.length !== 104) return { payee: null, valid: false };
-  const sigBytes = wordsToBytes(sigWords, false); // 65 bytes expected
-  if (sigBytes.length !== 65) return { payee: null, valid: false };
-  const r = sigBytes.subarray(0, 32);
-  const s = sigBytes.subarray(32, 64);
+/**
+ * Without an `n` field, BOLT11 relies on public-key recovery: any well-formed signature
+ * recovers *some* key, so tampering shows up only as a different payee — it cannot be
+ * detected without knowing the expected node. With an `n` field we can truly verify
+ * (and, per spec, must reject non-canonical high-S signatures).
+ */
+function checkSignature(hrp: string, dataWordsNoSig: number[], sigWords: number[], nField: string | null):
+  { payee: string | null; status: 'verified' | 'recovered' | 'invalid' } {
+  if (sigWords.length !== 104) return { payee: nField, status: 'invalid' };
+  const sigBytes = wordsToBytes(sigWords, false);
+  if (sigBytes.length !== 65) return { payee: nField, status: 'invalid' };
+  const compact = sigBytes.subarray(0, 64);
   const recoveryId = sigBytes[64];
-  if (recoveryId > 3) return { payee: null, valid: false };
-
   const hrpBytes = new TextEncoder().encode(hrp);
   const dataBytes = wordsToBytes(dataWordsNoSig, true);
   const msg = new Uint8Array(hrpBytes.length + dataBytes.length);
-  msg.set(hrpBytes, 0);
-  msg.set(dataBytes, hrpBytes.length);
+  msg.set(hrpBytes, 0); msg.set(dataBytes, hrpBytes.length);
   const digest = sha256(msg);
-
   try {
-    // noble: Signature from compact + recovery bit; recoverPublicKey(sig, msg, {prehash:false})
-    const compact = new Uint8Array(64);
-    compact.set(r, 0); compact.set(s, 32);
-    // Add recovery to signature — noble expects Signature with recovery or separate API
-    const sig = secp256k1.Signature.fromBytes(compact).addRecoveryBit(recoveryId);
-    const pub = sig.recoverPublicKey(digest); // already hashed
-    const payee = toHex(pub.toBytes(true));
-    if (expected && expected !== payee) {
-      // still recovered something; flag invalid if doesn't match n field
-      return { payee: expected, valid: false };
+    if (nField) {
+      const pub = Uint8Array.from(nField.match(/../g)!.map((h) => parseInt(h, 16)));
+      const ok = secp256k1.verify(compact, digest, pub, { prehash: false, lowS: true });
+      return { payee: nField, status: ok ? 'verified' : 'invalid' };
     }
-    return { payee, valid: true };
+    if (recoveryId > 3) return { payee: null, status: 'invalid' };
+    // BOLT11 permits high-S signatures for recovery. Like the reference implementations,
+    // normalise s to low-S and apply the recovery flag to the normalised signature
+    // (this matches the spec's "Public-key recovery with high-S signature" vector).
+    let sig = secp256k1.Signature.fromBytes(compact);
+    const rec = recoveryId;
+    if (sig.hasHighS()) {
+      const n = secp256k1.Point.Fn.ORDER;
+      sig = new secp256k1.Signature(sig.r, n - sig.s);
+    }
+    const pub = sig.addRecoveryBit(rec).recoverPublicKey(digest);
+    return { payee: toHex(pub.toBytes(true)), status: 'recovered' };
   } catch {
-    return { payee: expected ?? null, valid: false };
+    return { payee: nField, status: 'invalid' };
   }
 }
 
@@ -256,9 +267,7 @@ export function decodeBolt11(raw: string, now = Math.floor(Date.now() / 1000)): 
     }
   }
 
-  const { payee: recovered, valid } = recoverPayee(hrp, dataWords, sigWords, payeeField ?? undefined);
-  const payee = payeeField ?? recovered;
-  const ok = payeeField ? (valid && recovered === payeeField) : valid;
+  const { payee, status: signatureStatus } = checkSignature(hrp, dataWords, sigWords, payeeField);
 
   const expiresAt = timestamp + expiry;
   const amountSats = amountMsat === null ? null : Number(amountMsat / 1000n);
@@ -277,7 +286,8 @@ export function decodeBolt11(raw: string, now = Math.floor(Date.now() / 1000)): 
     descriptionHash,
     paymentSecret,
     payee,
-    signatureValid: ok && !!payee,
+    signatureStatus,
+    signatureValid: signatureStatus !== 'invalid',
     minFinalCltvExpiry,
     fallbackAddress,
     routeHints,
