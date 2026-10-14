@@ -74,7 +74,7 @@ export function valueToAddress(tx: Tx, address: string): number {
 
 export function incomingFromTxs(txs: Tx[], address: string, tipHeight: number): IncomingPayment[] {
   return txs
-    .map((tx) => {
+    .map((tx): IncomingPayment | null => {
       const value = valueToAddress(tx, address);
       if (value <= 0) return null;
       const confirmed = !!tx.status.confirmed;
@@ -88,5 +88,5 @@ export function incomingFromTxs(txs: Tx[], address: string, tipHeight: number): 
         feeRate: feeRate(tx.fee, tx.weight / 4),
       };
     })
-    .filter((x): x is IncomingPayment => !!x);
+    .filter((x): x is IncomingPayment => x !== null);
 }

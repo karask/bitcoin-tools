@@ -22,11 +22,13 @@ function duration(s: number) {
 function lnHtml(inv: Bolt11Invoice, now: number): string {
   const sats = inv.amountMsat === null ? null : Number(inv.amountMsat) / 1000;
   const left = inv.expiresAt - now;
+  const forWhat = inv.description ? ` for “<strong>${esc(inv.description)}</strong>”` : inv.descriptionHash ? ' (the description is only given as a hash — the recipient’s website or app should show what it is for)' : '';
+  const amtPhrase = sats === null ? '<strong>any amount you choose</strong>' : `<strong>${fmtSats(Math.floor(sats))}</strong>${sats % 1 ? ` (${sats.toFixed(3)} sats — includes millisatoshis)` : ''}${fiat(sats)}`;
   let html = '';
   if (!inv.signatureValid) html += verdict('bad', 'Signature check FAILED', '<p>The invoice’s signature does not match its contents. It may have been altered or corrupted. Do not pay it; ask the recipient for a new one.</p>');
   html += inv.expired
-    ? verdict('bad', 'EXPIRED — do not pay this invoice', `<p>It expired ${esc(fmtDate(inv.expiresAt))} (${duration(left)} ago). Most wallets will refuse it. Ask the recipient for a fresh invoice.</p>`)
-    : verdict(inv.network === 'mainnet' && inv.signatureValid ? 'ok' : 'warn', 'Lightning invoice', `<p>A request to pay ${sats === null ? '<strong>any amount you choose</strong>' : `<strong>${fmtSats(Math.floor(sats))}</strong>${sats % 1 ? ` (${(sats).toFixed(3)} sats — includes millisatoshis)` : ''}${fiat(sats)}`}${inv.description ? ` for “<strong>${esc(inv.description)}</strong>”` : inv.descriptionHash ? ' (the description is only given as a hash — the recipient’s website or app should show what it is for)' : ''}.</p>
+    ? verdict('bad', 'EXPIRED — do not pay this invoice', `<p>It asked for ${amtPhrase}${forWhat}. It expired ${esc(fmtDate(inv.expiresAt))} (${duration(left)} ago). Most wallets will refuse it. Ask the recipient for a fresh invoice.</p>${inv.network !== 'mainnet' ? `<p><strong>Also: this is a ${inv.network} invoice.</strong></p>` : ''}`)
+    : verdict(inv.network === 'mainnet' && inv.signatureValid ? 'ok' : 'warn', 'Lightning invoice', `<p>A request to pay ${amtPhrase}${forWhat}.</p>
       <p>It expires in <strong>${duration(left)}</strong> (${esc(fmtDate(inv.expiresAt))}).${inv.network !== 'mainnet' ? ` <strong>This is a ${inv.network} invoice — test coins only, never pay it with real bitcoin.</strong>` : ''}</p>
       ${inv.signatureValid ? '<p class="small">The signature is valid: this invoice was created by the node shown below and has not been changed since. That does not tell you who runs that node.</p>' : ''}`);
   html += `<div class="stats">${stat('Amount', sats === null ? 'Any' : fmtSats(Math.floor(sats)), sats === null ? 'payer chooses' : `${inv.amountMsat} msat`)}${stat('Network', inv.network)}${stat('Expires', inv.expired ? 'Expired' : `in ${duration(left)}`, `created ${fmtDate(inv.timestamp)}`)}${stat('Signature', inv.signatureValid ? 'Valid' : 'Invalid')}</div>`;
