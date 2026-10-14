@@ -6,7 +6,7 @@ import Base from '../layouts/Base.astro';
   <h1>Privacy</h1>
   <p>This site is static: there is no server of ours that receives anything you type. There are no analytics, trackers, cookies or third-party scripts. The page itself is served by GitHub Pages, which, like any web host, can see your IP address when you load it.</p>
   <h2>What is sent to mempool.space, and when</h2>
-  <p>Some tools need live blockchain data. Those requests go directly from your browser to the public <a href="https://mempool.space">mempool.space</a> API, which will see your IP address and what you looked up. Specifically:</p>
+  <p>Some tools need live blockchain data. Those requests go directly from your browser to the public <a href="https://mempool.space">mempool.space</a> API, which will see your IP address and what you looked up. If you pick Signet or Testnet4 in a tool’s network selector, the same requests go to mempool.space’s test-network API (<code>mempool.space/signet/api</code> or <code>mempool.space/testnet4/api</code>) instead, and no prices are fetched. Specifically:</p>
   <table>
     <thead><tr><th>Tool</th><th>What is sent</th><th>When</th></tr></thead>
     <tbody>

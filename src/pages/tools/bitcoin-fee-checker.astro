@@ -1,6 +1,8 @@
 ---
 import Tool from '../../layouts/Tool.astro';
+import NetworkSelect from '../../components/NetworkSelect.astro';
 const faq = [
+  { q: 'Can I see Signet or Testnet4 fees?', a: 'Yes, pick the network above. Test-network fees are mostly at the minimum and tell you nothing about real-bitcoin fees, and no fiat prices are shown because test coins have no value.' },
   { q: 'What is sat/vB?', a: 'Satoshis per virtual byte. Bitcoin fees are not based on the amount you send but on how much block space your transaction uses. A sat is one hundred-millionth of a bitcoin, and a virtual byte (vbyte) is the unit of transaction size. Multiply the fee rate by your transaction size to get the total fee.' },
   { q: 'Why does sending $10 cost the same fee as sending $1 million?', a: 'Because miners charge for space, not value. A simple transaction takes roughly the same space no matter how much it moves. What makes a transaction bigger is the number of inputs (coins being spent) and outputs (recipients).' },
   { q: 'What happens if I pay too little?', a: 'Your transaction waits in the mempool until block space is cheap enough. If it waits too long, nodes may drop it and the coins stay with you. If your wallet supports Replace-by-Fee, you can usually raise the fee later. Our stuck transaction helper explains the options.' },
@@ -10,6 +12,7 @@ const faq = [
 ---
 <Tool slug="bitcoin-fee-checker" title="Bitcoin Fee Checker — what fee to pay right now (sat/vB, USD, EUR)" description="Live Bitcoin fee estimates in plain English: what to pay to confirm in ~10 minutes, ~1 hour or ~1 day, in sat/vB and total cost in sats, USD and EUR." h1="Bitcoin fee checker" lead="How much should you pay to get your bitcoin transaction confirmed? Here are live estimates for fast, normal and patient payments — in sats, dollars and euros." faq={faq}>
   <Fragment slot="tool">
+    <NetworkSelect />
     <div class="row">
       <div><label for="fee-kind">Wallet / address type</label>
         <select id="fee-kind">

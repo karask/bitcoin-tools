@@ -185,7 +185,9 @@ export function decodeBolt11(raw: string, now = Math.floor(Date.now() / 1000)): 
   const lower = input.toLowerCase();
 
   // bech32 with no practical length limit
-  const decoded = bech32.decode(lower as `${string}1${string}`, Number.MAX_SAFE_INTEGER);
+  let decoded: ReturnType<typeof bech32.decode>;
+  try { decoded = bech32.decode(lower as `${string}1${string}`, Number.MAX_SAFE_INTEGER); }
+  catch { throw new Error('Not a valid Lightning invoice. It should start with “lnbc” (or lntb/lntbs/lnbcrt) and be a long string of letters and numbers — check that you copied all of it.'); }
   const hrp = decoded.prefix;
   const words = decoded.words as number[];
   if (words.length < 3 + 104) throw new Error('Invoice is too short to contain a signature.');

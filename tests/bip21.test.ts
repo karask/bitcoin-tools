@@ -44,3 +44,17 @@ describe('parseBip21', () => {
     expect(p.lightning).toBe('lnbc1pvjluez');
   });
 });
+
+describe('amount validation (B3/B4)', () => {
+  it('negative string says positive', () => { expect(() => formatBip21Amount('-1')).toThrow(/must be positive/); });
+  it('negative number says positive', () => { expect(() => formatBip21Amount(-0.5)).toThrow(/must be positive/); });
+  it('parse rejects negative amount clearly', () => { expect(() => parseBip21('bitcoin:bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq?amount=-1')).toThrow(/must be positive/); });
+  it('exponent still gets the plain-decimal message', () => { expect(() => formatBip21Amount('1e3')).toThrow(/scientific/); });
+  it('21M exactly is allowed', () => { expect(formatBip21Amount('21000000')).toBe('21000000'); });
+  it('over 21M rejected (string, number, build, parse)', () => {
+    expect(() => formatBip21Amount('21000000.00000001')).toThrow(/21,000,000/);
+    expect(() => formatBip21Amount(22e6)).toThrow(/21,000,000/);
+    expect(() => buildBip21({ address: 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq', amountBtc: '99999999' })).toThrow(/21,000,000/);
+    expect(() => parseBip21('bitcoin:bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq?amount=30000000')).toThrow(/21,000,000/);
+  });
+});

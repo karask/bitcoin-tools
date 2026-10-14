@@ -129,3 +129,14 @@ describe('BOLT11 n field', () => {
     expect(st).toBe('invalid');
   });
 });
+
+describe('junk input (B5)', () => {
+  for (const s of ['garbage', 'lnbc1', 'lnbc1qqqq', 'lnbc']) {
+    it(`friendly error for "${s}"`, () => {
+      let msg = '';
+      try { decodeBolt11(s); } catch (e) { msg = (e as Error).message; expect(e).not.toBeInstanceOf(TypeError); }
+      expect(msg).toMatch(/Not a valid Lightning invoice|too short|start with ln/i);
+      expect(msg).not.toMatch(/invalid string length|expected \(/);
+    });
+  }
+});

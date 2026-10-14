@@ -5,6 +5,10 @@ import { $, loading, showError, onSubmit } from './ui';
 const f = { sats: $<HTMLInputElement>('#c-sats'), btc: $<HTMLInputElement>('#c-btc'), usd: $<HTMLInputElement>('#c-usd'), eur: $<HTMLInputElement>('#c-eur') };
 const status = $('#c-status');
 let price = { USD: 0, EUR: 0 };
+const warn = document.createElement('p');
+warn.className = 'small';
+warn.setAttribute('role', 'alert');
+status.after(warn);
 
 const clean = (v: string) => Number(v.replace(/[,\s_]/g, ''));
 function setFrom(src: keyof typeof f) {
@@ -13,6 +17,7 @@ function setFrom(src: keyof typeof f) {
   let sats = 0;
   if (src === 'sats') sats = v; else if (src === 'btc') sats = v * SATS;
   else if (price[src.toUpperCase() as 'USD']) sats = (v / price[src.toUpperCase() as 'USD']) * SATS;
+  warn.textContent = sats > 21e6 * SATS ? 'Note: that is more than 21,000,000 BTC — more bitcoin than will ever exist.' : '';
   if (src !== 'sats') f.sats.value = String(Math.round(sats));
   if (src !== 'btc') f.btc.value = (sats / SATS).toFixed(8).replace(/\.?0+$/, '');
   if (src !== 'usd' && price.USD) f.usd.value = ((sats / SATS) * price.USD).toFixed(2);

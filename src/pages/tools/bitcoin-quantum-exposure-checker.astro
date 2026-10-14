@@ -1,16 +1,19 @@
 ---
 import Tool from '../../layouts/Tool.astro';
+import NetworkSelect from '../../components/NetworkSelect.astro';
 const faq = [
   { q: 'Can a quantum computer steal bitcoin today?', a: 'No. No existing quantum computer comes anywhere near breaking the elliptic-curve cryptography Bitcoin uses. This tool is about understanding long-term exposure, not an imminent threat.' },
   { q: 'Why does spending from an address reveal the public key?', a: 'Legacy and SegWit addresses commit only to a hash of the public key. To spend, you must show the actual public key and a signature, so it becomes visible on the blockchain forever.' },
   { q: 'Why is Taproot always shown as exposed?', a: 'A Taproot address encodes a (tweaked) public key directly, rather than its hash. This was a deliberate design trade-off for efficiency and privacy. It means the key is visible as soon as the address is known.' },
-  { q: 'Is a never-spent bc1q address completely safe?', a: 'From the blockchain’s point of view, its public key is not revealed. But it can be revealed elsewhere, for example if you shared an extended public key (xpub) with a service or signed a message. And when you do spend, the key becomes visible while the transaction waits to confirm.' },
+  { q: 'Does it work on Signet or Testnet4?', a: 'Yes. Pick the network above the form. Test-network results use mempool.space’s Signet or Testnet4 explorer and involve test coins with no value.' },
+  { q: 'Is a never-spent bc1q address completely safe?', a: 'Not necessarily. Its own history does not reveal the public key, which is why the result is amber rather than green. But the same key could have been used in another output type (such as an early pay-to-public-key output), and it can be revealed elsewhere, for example if you shared an extended public key (xpub) with a service or signed a message. This tool checks a list of early P2PK keys (blocks 0–999), but no list can be complete. And when you do spend, the key becomes visible while the transaction waits to confirm.' },
   { q: 'What is BIP-360?', a: 'BIP-360 is a proposal to add a new output type designed to make Bitcoin more resistant to future quantum attacks. It is still under discussion; follow it if you care about long-term preparedness.' },
   { q: 'Should I move my coins now?', a: 'There is no need to panic. Good practice is to avoid address reuse, and to move funds sitting on an address whose key is already exposed to a fresh address when it is convenient and fees are low.' },
 ];
 ---
 <Tool slug="bitcoin-quantum-exposure-checker" title="Bitcoin Quantum Exposure Checker — is your public key exposed?" description="Check whether a Bitcoin address has revealed its public key on-chain (spent from, reused, P2PK or Taproot), what that means for future quantum computers, and what to do — calmly explained." h1="Quantum exposure checker" lead="Future quantum computers could, in theory, derive private keys from public keys. Check whether an address’s public key is already visible on the blockchain — and what, if anything, to do about it." faq={faq}>
   <Fragment slot="tool">
+    <NetworkSelect />
     <form id="q-form">
       <label for="q-input">Bitcoin address (or a raw public key)</label>
       <div class="row"><input id="q-input" class="mono" placeholder="bc1q… / bc1p… / 1… / 3…" autocomplete="off" spellcheck="false" required />
@@ -35,7 +38,7 @@ const faq = [
   <p>Use a fresh address for every payment, which almost all modern wallets do automatically. If you hold funds on an address that has already been spent from, consider moving them to a fresh address when fees are low. Follow proposals such as BIP-360 for quantum-resistant outputs; if Bitcoin adopts one, moving to it will be the real long-term fix. And be wary of anyone using quantum fears to rush you into sending them coins.</p>
 
   <Fragment slot="example">
-    <p>Imagine a bc1q address that received 0.5 BTC, then spent 0.2 BTC, with the remaining 0.3 BTC sent back to the same address as change. The first spend revealed its public key, so the tool reports it as <strong>exposed</strong> and notes 0.3 BTC remaining on a reused address. A different bc1q address that has only ever received coins shows as <strong>not revealed on-chain</strong>. Any bc1p Taproot address shows as exposed, because its key is part of the address.</p>
+    <p>Imagine a bc1q address that received 0.5 BTC, then spent 0.2 BTC, with the remaining 0.3 BTC sent back to the same address as change. The first spend revealed its public key, so the tool reports it as <strong>exposed</strong> and notes 0.3 BTC remaining on a reused address. A different bc1q address that has only ever received coins shows as <strong>not revealed by this address’s own history</strong> — an amber result, not an all-clear, because the same key could have been revealed somewhere else. The genesis-block address 1A1zP1… is a famous case: it was never spent from, yet its public key is on-chain in the block-0 pay-to-public-key output, so the tool reports it as exposed. Any bc1p Taproot address shows as exposed, because its key is part of the address.</p>
   </Fragment>
 </Tool>
 <script>import '../../scripts/quantum.ts';</script>

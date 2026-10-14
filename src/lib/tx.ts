@@ -93,7 +93,7 @@ export function analyzeStuck(tx: Tx, fees: RecommendedFees, opts: { effectiveRat
   const rbf = signalsRbf(tx);
   const spendableOutputs = tx.vout
     .map((o, i) => ({ o, i }))
-    .filter(({ o, i }) => o.scriptpubkey_type !== 'op_return' && o.value >= 546 && !(opts.outspends?.[i]?.spent))
+    .filter(({ o, i }) => o.scriptpubkey_type !== 'op_return' && o.value >= dustFor(o.scriptpubkey_type) && !(opts.outspends?.[i]?.spent))
     .map(({ i }) => i);
   const targetRate = fees.halfHourFee;
   const position: StuckAnalysis['position'] =
@@ -155,4 +155,10 @@ export function opReturnData(o: Vout): { hex: string; text: string | null } | nu
   const bytes = hex.match(/../g)?.map((h) => parseInt(h, 16)) ?? [];
   const printable = bytes.length > 0 && bytes.every((b) => (b >= 32 && b < 127) || b === 10);
   return { hex, text: printable ? String.fromCharCode(...bytes) : null };
+}
+
+/** Per-output-type dust limit (Bitcoin Core defaults at 3 sat/vB), keyed by mempool.space scriptpubkey_type. */
+export function dustFor(scriptType: string): number {
+  const m: Record<string, number> = { p2pkh: 546, p2sh: 540, v0_p2wpkh: 294, v0_p2wsh: 330, v1_p2tr: 330, p2pk: 546 };
+  return m[scriptType] ?? 546;
 }

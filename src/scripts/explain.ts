@@ -1,3 +1,4 @@
+import { currentNet, NETS } from '../lib/network';
 import { getTx, getPrices, getHistoricalPrice, getTipHeight, isTxid } from '../lib/api';
 import { signalsRbf, locktimeEnforced, describeLocktime, vsizeFromWeight, isSegwit, usesTaproot, guessChange, opReturnData, type Vout } from '../lib/tx';
 import { fmtSats, fmtBtc, fmtFiat, fmtRate, fmtDate, esc, plural, ago } from '../lib/format';
@@ -68,7 +69,7 @@ onSubmit(form, async () => {
         <tr><td>txid</td><td class="mono">${esc(tx.txid)}</td></tr><tr><td>Version</td><td>${tx.version}</td></tr>
         <tr><td>Locktime</td><td>${tx.locktime} (${lt.kind}${lt.kind !== 'none' ? locktimeEnforced(tx) ? ', enforced' : ', not enforced: all sequences final' : ''})</td></tr>
         <tr><td>Inputs</td><td class="mono">${tx.vin.map((v) => v.is_coinbase ? 'coinbase' : `${esc(v.txid)}:${v.vout} — ${v.prevout ? fmtBtc(v.prevout.value) + ' ' + (TYPE[v.prevout.scriptpubkey_type] ?? v.prevout.scriptpubkey_type) : ''} seq 0x${v.sequence.toString(16)}`).join('<br>')}</td></tr>
-        </table><p class="small"><a href="https://mempool.space/tx/${esc(tx.txid)}">View on mempool.space</a></p>`);
+        </table><p class="small"><a href="${NETS[currentNet()].web}/tx/${esc(tx.txid)}">View on mempool.space</a></p>`);
   } catch (e) { showError(out, e); }
 });
 fromQuery(input, form);

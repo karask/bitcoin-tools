@@ -1,5 +1,7 @@
-// All network calls go to the public mempool.space API only.
-export const API = 'https://mempool.space/api';
+// All network calls go to the public mempool.space API only (mainnet, or its testnet4/signet mirrors).
+import { currentNet, NETS, NET_NAME } from './network';
+export const API = NETS.mainnet.api;
+export const apiBase = () => NETS[currentNet()].api;
 
 export class ApiError extends Error {}
 
@@ -9,12 +11,12 @@ export const TIMEOUT_MS = 15_000;
 async function get<T>(path: string, text = false): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(API + path, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+    res = await fetch(apiBase() + path, { signal: AbortSignal.timeout(TIMEOUT_MS) });
   } catch (e) {
     if (e instanceof DOMException && e.name === 'TimeoutError') throw new ApiError(`mempool.space did not respond within ${TIMEOUT_MS / 1000} seconds. It may be down, or blocked on your network. Please try again in a moment.`);
     throw new ApiError('Could not reach mempool.space. Check your internet connection, or try again in a moment (an ad-blocker or privacy extension may also block it).');
   }
-  if (res.status === 404 || res.status === 400) throw new ApiError('Not found. Double-check what you entered — it may contain a typo, or belong to a different network (this site uses Bitcoin mainnet).');
+  if (res.status === 404 || res.status === 400) throw new ApiError(`Not found. Double-check what you entered — it may contain a typo, or belong to a different network (this page is set to ${NET_NAME[currentNet()]}; change the network selector if needed).`);
   if (res.status === 429) throw new ApiError('mempool.space is rate-limiting requests right now. Please wait a minute and try again.');
   if (!res.ok) throw new ApiError(`mempool.space returned an error (${res.status}). Please try again later.`);
   return (text ? res.text() : res.json()) as Promise<T>;
@@ -32,8 +34,11 @@ export async function getTxOrNull(txid: string): Promise<import('./tx').Tx | nul
   try { return await getTx(txid); }
   catch (e) { if (e instanceof ApiError && /Not found/.test(e.message)) return null; throw e; }
 }
-export const getPrices = () => get<Prices>('/v1/prices');
+/** Prices only exist for real bitcoin: on test networks these reject, and callers hide fiat. */
+function mainnetOnly() { if (currentNet() !== 'mainnet') throw new ApiError('Prices are not shown on test networks (test coins have no value).'); }
+export const getPrices = async () => { mainnetOnly(); return get<Prices>('/v1/prices'); };
 export async function getHistoricalPrice(unix: number): Promise<{ USD: number; EUR: number; time: number } | null> {
+  mainnetOnly();
   const r = await get<{ prices: { time: number; USD: number; EUR: number }[] }>(`/v1/historical-price?currency=EUR&timestamp=${unix}`);
   return r.prices?.[0] ?? null;
 }

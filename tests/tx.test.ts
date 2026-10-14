@@ -64,3 +64,14 @@ describe('misc', () => {
     expect(opReturnData({ scriptpubkey: '6a0568656c6c6f', scriptpubkey_type: 'op_return', value: 0 })?.text).toBe('hello');
   });
 });
+
+describe('per-type dust (B2)', () => {
+  const o = (t: string, value: number) => ({ scriptpubkey: '', scriptpubkey_type: t, scriptpubkey_address: 'x', value });
+  it('a 300-sat P2WPKH output is spendable (dust is 294, not 546)', () => {
+    expect(analyzeStuck(mkTx({ vout: [o('v0_p2wpkh', 300)] }), fees).spendableOutputs).toEqual([0]);
+  });
+  it('per-type thresholds', () => {
+    const tx = mkTx({ vout: [o('v0_p2wpkh', 293), o('p2pkh', 545), o('p2pkh', 546), o('p2sh', 540), o('v1_p2tr', 330), o('v0_p2wsh', 329)] });
+    expect(analyzeStuck(tx, fees).spendableOutputs).toEqual([2, 3, 4]);
+  });
+});

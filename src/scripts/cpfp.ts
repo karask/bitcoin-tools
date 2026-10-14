@@ -1,3 +1,5 @@
+import { currentNet, addressFitsNet, NET_NAME } from '../lib/network';
+const net = currentNet();
 import { getTx, getOutspends, getCpfp, getFees, getTxHex, getTipHeight, isTxid } from '../lib/api';
 import { decodeAddress } from '../lib/address';
 import { vsizeFromWeight } from '../lib/tx';
@@ -71,9 +73,9 @@ async function build() {
   }
   const dest = decodeAddress($<HTMLInputElement>('#cpfp-dest').value);
   if (!dest.valid) { out.innerHTML = verdict('bad', 'Destination address is not valid', `<p>${esc(dest.error)}</p>`); return; }
-  if (dest.network !== 'mainnet') { out.innerHTML = verdict('bad', 'Wrong network', '<p>The stuck transaction is on Bitcoin mainnet; the destination must be a mainnet address too.</p>'); return; }
+  if (!addressFitsNet(dest.network, net)) { out.innerHTML = verdict('bad', 'Wrong network', `<p>The stuck transaction is on ${esc(NET_NAME[net])}; the destination must be a ${net === 'mainnet' ? 'mainnet (bc1…, 1…, 3…)' : 'test-network (tb1…, m…, n…, 2…)'} address too.</p>`); return; }
   const outKind = outKindFromAddressType(dest.type);
-  if (!outKind) { out.innerHTML = verdict('bad', 'Unsupported destination type', '<p>Use a normal address from your wallet (bc1q…, bc1p…, 1… or 3…).</p>'); return; }
+  if (!outKind) { out.innerHTML = verdict('bad', 'Unsupported destination type', `<p>Use a normal address from your wallet (${net === 'mainnet' ? 'bc1q…, bc1p…, 1… or 3…' : 'tb1q…, tb1p…, m…/n… or 2…'}).</p>`); return; }
   const sp = $<HTMLSelectElement>('#cpfp-speed').value;
   const rate = sp === 'custom' ? Number($<HTMLInputElement>('#cpfp-custom').value) : fees[sp as keyof RecommendedFees];
   if (!isFinite(rate) || rate <= 0 || rate > 2000) { out.innerHTML = verdict('bad', 'Check the fee rate', '<p>Enter a positive number of sat/vB (for example 12).</p>'); return; }
@@ -86,7 +88,7 @@ async function build() {
   loading(out, 'Building the unsigned PSBT…');
   try {
     const parentHex = kind === 'p2pkh' ? await getTxHex(parent.txid) : undefined;
-    const psbt = buildChildPsbt({ parentTxid: parent.txid, vout, value: o.value, scriptHex: o.scriptpubkey, kind, parentHex, destination: dest.address, sendValue: safe.sendValue, mainnet: true, locktime: tip || 0 });
+    const psbt = buildChildPsbt({ parentTxid: parent.txid, vout, value: o.value, scriptHex: o.scriptpubkey, kind, parentHex, destination: dest.address, sendValue: safe.sendValue, mainnet: net === 'mainnet', locktime: tip || 0 });
     let qr = '';
     if (psbt.base64.length <= 1800) { try { qr = `<img src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrSvg(psbt.base64, 4).svg)}" width="260" height="260" alt="QR code of the PSBT" style="border-radius:12px;display:block;max-width:100%;height:auto" />`; } catch { qr = ''; } }
     out.innerHTML = (safe.warn ? verdict('warn', 'Expensive', `<p>${esc(safe.warn)}</p>`) : '')

@@ -1,6 +1,8 @@
 ---
 import Tool from '../../layouts/Tool.astro';
+import NetworkSelect from '../../components/NetworkSelect.astro';
 const faq = [
+  { q: 'Does it work with Signet or Testnet4 transactions?', a: 'Yes. Choose the network above the form, then paste the transaction ID. Test-network coins have no value, so no prices are shown.' },
   { q: 'Can this tool tell me who sent or received the bitcoin?', a: 'No. Bitcoin shows addresses and amounts, not names. It is impossible to know who controls an address from the blockchain alone.' },
   { q: 'What is “change”?', a: 'Bitcoin spends whole coins. If you pay 0.3 BTC using a 1 BTC coin, the transaction sends 0.3 BTC to the recipient and returns about 0.7 BTC (minus the fee) to an address in your own wallet. That second output is change.' },
   { q: 'How does the tool guess which output is change?', a: 'It uses common heuristics: an output going back to an input address, an output of the same type as the inputs when the other differs, or the non-round amount when the other is round. These are hints, not proof, and the tool always says so.' },
@@ -11,6 +13,7 @@ const faq = [
 ---
 <Tool slug="bitcoin-transaction-explainer" title="Bitcoin Transaction Explainer — understand any txid in plain English" description="Paste a Bitcoin transaction ID and get a plain-English summary: amounts, likely payment and change, fee and fee rate, size, confirmations, RBF, locktime and OP_RETURN data." h1="Transaction explainer" lead="Paste any Bitcoin transaction ID and get a plain-English explanation of what happened: how much moved, to how many places, what fee was paid, and whether it’s confirmed." faq={faq}>
   <Fragment slot="tool">
+    <NetworkSelect />
     <form id="tx-form">
       <label for="tx-input">Transaction ID (txid)</label>
       <div class="row"><input id="tx-input" class="mono" placeholder="64 hex characters" autocomplete="off" spellcheck="false" required />

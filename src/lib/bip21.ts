@@ -18,22 +18,28 @@ export interface BuildBip21Opts {
   uppercase?: boolean;
 }
 
+/** Total bitcoin supply cap. */
+export const MAX_BTC = 21_000_000;
+
 /** Format a BTC amount for BIP-21: no scientific notation, ≤ 8 decimals, no trailing zeros after the point except keeping at least one digit if needed. */
 export function formatBip21Amount(amount: number | string): string {
   let s: string;
   if (typeof amount === 'number') {
-    if (!isFinite(amount) || amount < 0) throw new Error('Amount must be a non-negative number');
+    if (!isFinite(amount)) throw new Error('Amount must be a number');
+    if (amount < 0) throw new Error('Amount must be positive');
     // avoid float artefacts: work in sats
     const sats = Math.round(amount * 1e8);
     if (Math.abs(amount * 1e8 - sats) > 1e-6) throw new Error('Amount has more than 8 decimal places');
     s = (sats / 1e8).toFixed(8);
   } else {
     s = amount.trim();
+    if (/^-/.test(s)) throw new Error('Amount must be positive');
     if (!/^\d+(\.\d+)?$/.test(s)) throw new Error('Amount must be a plain decimal (no scientific notation)');
     const [a, b = ''] = s.split('.');
     if (b.length > 8) throw new Error('Amount has more than 8 decimal places');
     s = b ? `${a}.${b}` : a;
   }
+  if (Number(s) > MAX_BTC) throw new Error('Amount is more than 21,000,000 BTC — more bitcoin than will ever exist');
   // strip trailing zeros after decimal, but keep "0" if zero
   if (s.includes('.')) s = s.replace(/\.?0+$/, '');
   if (s === '' || s === '.') s = '0';

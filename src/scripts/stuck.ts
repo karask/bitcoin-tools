@@ -1,3 +1,4 @@
+import { currentNet, netMismatch, withNet, NET_NAME } from '../lib/network';
 import { getTxOrNull, getFees, getOutspends, getCpfp, getTipHeight, getAddressTxs, isTxid } from '../lib/api';
 import { decodeAddress } from '../lib/address';
 import { confirmations, etaWording, incomingFromTxs, NOT_FOUND_NOTE } from '../lib/tracker';
@@ -29,7 +30,7 @@ async function check(q: string, quiet = false) {
     else {
       const a = decodeAddress(q);
       if (!a.valid) { out.innerHTML = verdict('bad', 'That is neither a transaction ID nor a valid address', `<p>A transaction ID is 64 characters of 0–9 and a–f. ${esc(a.error)}</p>`); stop(); return; }
-      if (a.network !== 'mainnet') { out.innerHTML = verdict('warn', 'Test-network address', '<p>This page follows Bitcoin mainnet only.</p>'); stop(); return; }
+      { const mm = netMismatch(a.network, currentNet()); if (mm) { out.innerHTML = verdict('warn', 'Address is for a different network', `<p>${esc(mm)}</p>`); stop(); return; } }
       if (!quiet) loading(out, 'Looking up recent payments on mempool.space…');
       await showAddress(a.address);
     }
@@ -44,7 +45,7 @@ async function showAddress(address: string) {
   const inc = incomingFromTxs(txs, address, tip);
   const pending = inc.filter((p) => p.status === 'mempool');
   let html = inc.length === 0
-    ? verdict('warn', 'No incoming payments found yet', '<p>Nothing has been received at this address on mainnet in its recent history. If you are expecting a payment, turn on auto-refresh and keep this page open.</p>')
+    ? verdict('warn', 'No incoming payments found yet', '<p>Nothing has been received at this address on ${NET_NAME[currentNet()]} in its recent history. If you are expecting a payment, turn on auto-refresh and keep this page open.</p>')
     : verdict(pending.length ? 'warn' : 'ok', pending.length ? `${pending.length} incoming payment${pending.length > 1 ? 's' : ''} still waiting to confirm` : 'All recent incoming payments have landed (confirmed)',
       `<p>The ${inc.length} most recent payment${inc.length > 1 ? 's' : ''} into this address, newest first.${pending.length ? ' Click a waiting one to see why and how to speed it up.' : ''}</p>`);
   if (inc.length) html += `<div style="overflow-x:auto"><table><tr><th>Received</th><th>Status</th><th>When</th><th>Transaction</th></tr>${inc.slice(0, 25).map((p) => `<tr>
@@ -68,7 +69,7 @@ async function showTx(txid: string, quiet: boolean) {
   {
     const [tx, fees, tip] = await Promise.all([getTxOrNull(txid), getFees(), getTipHeight().catch(() => undefined)]);
     if (!tx) {
-      out.innerHTML = verdict('warn', 'Not found on mainnet (right now)', `<p>${esc(NOT_FOUND_NOTE)}</p><p>If it was just sent, wait a minute and check again. If the sender used “Bump fee”, the transaction ID changes — ask them for the new one, or check the receiving address instead.</p>`);
+      out.innerHTML = verdict('warn', `Not found on ${NET_NAME[currentNet()]} (right now)`, `<p>${esc(NOT_FOUND_NOTE)}</p><p>If it was just sent, wait a minute and check again. If the sender used “Bump fee”, the transaction ID changes — ask them for the new one, or check the receiving address instead.</p>`);
       stop(); return;
     }
     const [outspends, cpfp] = await Promise.all([
@@ -95,7 +96,7 @@ async function showTx(txid: string, quiet: boolean) {
           opts.push(`<p><strong>If you sent it</strong> from a wallet with a “Bump fee” / “Speed up” button, use that (RBF): aim for about ${fmtRate(a.targetRate)}, a total fee of at least ~${fmtSats(a.rbfFee!)}.</p>`);
         }
         if (a.advice === 'cpfp' || a.advice === 'rbf-or-cpfp') {
-          opts.push(`<p><strong>If you are the receiver</strong> (or own the change), you can speed it up yourself with CPFP: roughly <strong>${fmtSats(a.cpfpChildFee!)}</strong> for a simple ~${CPFP_CHILD_VSIZE} vB child. <a href="?cpfp=${tx.txid}#cpfp">Build the CPFP transaction below →</a></p>`);
+          opts.push(`<p><strong>If you are the receiver</strong> (or own the change), you can speed it up yourself with CPFP: roughly <strong>${fmtSats(a.cpfpChildFee!)}</strong> for a simple ~${CPFP_CHILD_VSIZE} vB child. <a href="${withNet(`?cpfp=${tx.txid}#cpfp`)}">Build the CPFP transaction below →</a></p>`);
         }
         if (a.advice === 'cpfp') opts.push(`<p class="small muted">It does not signal RBF. Most nodes now run with “full-RBF” (Bitcoin Core 28+ default), so a sender’s replacement would often still propagate — but many wallets will not offer to bump a non-signalling transaction.</p>`);
         if (a.advice === 'wait-or-accelerate') opts.push(`<h3>Your options</h3><p>It does not signal RBF and has no unspent outputs to use for CPFP, so the usual choices are to <strong>wait</strong>, or, as a last resort, a paid accelerator such as <a href="https://mempool.space/accelerator">mempool.space Accelerator</a> (paid, not guaranteed; Binance’s accelerator closes with Binance Pool on 10 Nov 2026). Under full-RBF, the sender may still be able to replace it with wallet software that supports it.</p>`);

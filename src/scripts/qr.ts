@@ -15,7 +15,7 @@ const out = $('#qr-result');
 let price: { USD: number; EUR: number } | null = null;
 
 /** Convert the amount box to a BTC decimal string (exact, ≤ 8 decimals) or '' if empty. */
-function amountBtc(): { btc: string; sats: number } | null | 'bad' {
+function amountBtc(): { btc: string; sats: number } | null | 'bad' | 'too-big' {
   const raw = amount.value.replace(/[,\s_]/g, '');
   if (!raw) return null;
   if (!/^\d*\.?\d*$/.test(raw) || raw === '.') return 'bad';
@@ -34,7 +34,8 @@ function amountBtc(): { btc: string; sats: number } | null | 'bad' {
     if (!p) return 'bad';
     sats = Math.round((v / p) * SATS);
   }
-  if (sats < 1 || sats > 21e6 * SATS) return 'bad';
+  if (sats > 21e6 * SATS) return 'too-big';
+  if (sats < 1) return 'bad';
   return { btc: formatBip21Amount(sats / SATS), sats };
 }
 
@@ -47,6 +48,10 @@ function render() {
     return;
   }
   const amt = amountBtc();
+  if (amt === 'too-big') {
+    out.innerHTML = verdict('bad', 'Amount is too large', '<p>That is more than 21,000,000 BTC — more bitcoin than will ever exist. Check the amount and the unit.</p>');
+    return;
+  }
   if (amt === 'bad') {
     out.innerHTML = verdict('bad', 'Check the amount', `<p>${unit.value === 'btc' ? 'Use a plain number with at most 8 decimal places, e.g. 0.0015.' : unit.value === 'sats' ? 'Sats must be a whole number.' : price ? 'Use a plain number, e.g. 25.' : 'Live price is unavailable, so fiat amounts cannot be converted right now. Enter BTC or sats instead.'}</p>`);
     return;
