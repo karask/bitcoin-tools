@@ -88,14 +88,14 @@ describe('bump target from projected blocks (B7)', () => {
     expect(bumpTarget({ ...flat, halfHourFee: 15 }, [full(3, 2)]).rate).toBe(15);
   });
   it('next block not full → just above its lowest fee', () => {
-    expect(bumpTarget(flat, [{ blockVSize: 250_000, medianFee: 0, feeRange: [0.5, 1, 2] }])).toEqual({ rate: 1, source: 'projected' });
+    expect(bumpTarget(flat, [{ blockVSize: 250_000, medianFee: 0, feeRange: [0.5, 1, 2] }])).toMatchObject({ rate: 1, source: 'projected' });
   });
   it('median 0 (bad data) uses the middle of the fee range', () => {
     expect(bumpTarget(flat, [{ blockVSize: 999_000, medianFee: 0, feeRange: [1, 1.004, 3] }]).rate).toBeCloseTo(1.2);
   });
   it('falls back to estimate + margin when projections fail or are malformed', () => {
-    expect(bumpTarget(flat, null)).toEqual({ rate: 1.2, source: 'estimate' });
-    expect(bumpTarget({ ...flat, halfHourFee: 20 }, [])).toEqual({ rate: 22, source: 'estimate' });
+    expect(bumpTarget(flat, null)).toMatchObject({ rate: 1.2, source: 'estimate' });
+    expect(bumpTarget({ ...flat, halfHourFee: 20 }, [])).toMatchObject({ rate: 22, source: 'estimate' });
     expect(bumpTarget(flat, [{ blockVSize: NaN, medianFee: 1, feeRange: [] } as MempoolBlock]).source).toBe('estimate');
   });
   it('blocksAhead finds position behind full blocks', () => {
@@ -119,7 +119,7 @@ describe('below minimum fee never says wait (B8)', () => {
   it('Signet repro: 0.106 sat/vB, next block not full → bump, target ≥ 1', () => {
     const a = analyzeStuck(mkTx({ fee: 15, weight: 564, vin: [vin(0xfffffffd)] }), flat, { blocks: notFull });
     expect(a.position).toBe('below-minimum'); expect(a.advice).not.toBe('wait');
-    expect(a.targetRate).toBeGreaterThanOrEqual(1); expect(a.rbfFee).toBe(156); expect(a.cpfpChildFee).toBe(236);
+    expect(a.targetRate).toBe(2); expect(a.rbfFee).toBe(282); expect(a.cpfpChildFee).toBe(487); // B9: minimum + 1 for a below-minimum parent
   });
   it('also without projections', () => {
     expect(analyzeStuck(mkTx({ fee: 15, vin: [vin(0xfffffffd)] }), { ...flat, hourFee: 0.1 }).advice).not.toBe('wait');
@@ -131,5 +131,31 @@ describe('below minimum fee never says wait (B8)', () => {
   });
   it('at the minimum in a non-full block still waits', () => {
     expect(analyzeStuck(mkTx({ fee: 141 }), flat, { blocks: notFull }).advice).toBe('wait');
+  });
+});
+
+describe('low-fee parent lifted by a child (B9)', () => {
+  const flat = { fastestFee: 1, halfHourFee: 1, hourFee: 1, economyFee: 1, minimumFee: 1 };
+  const notFull: MempoolBlock[] = [{ blockVSize: 345_000, medianFee: 0, feeRange: [0.107, 1, 3] }];
+  it('bumpTarget: parent below minimum → at least minimum + 1', () => {
+    expect(bumpTarget(flat, notFull, 0.106)).toMatchObject({ rate: 2, lowParent: true });
+    expect(bumpTarget({ ...flat, minimumFee: 2 }, null, 0.5).rate).toBe(3);
+  });
+  it('bumpTarget: higher projected target still wins', () => {
+    const full: MempoolBlock[] = [{ blockVSize: 998_000, medianFee: 4, feeRange: [3, 4, 9] }];
+    expect(bumpTarget(flat, full, 0.1).rate).toBeCloseTo(4.1);
+  });
+  it('bumpTarget: normal parent unaffected', () => {
+    expect(bumpTarget(flat, notFull, 1.5)).toMatchObject({ rate: 1, lowParent: false });
+    expect(bumpTarget(flat, notFull)).toMatchObject({ rate: 1, lowParent: false });
+  });
+  it('Retest 3 repro: own 0.106, package 1.006 → not "wait", target 2, fees sized for 2 sat/vB', () => {
+    const a = analyzeStuck(mkTx({ fee: 15, weight: 564, vin: [vin(0xfffffffd)] }), flat, { effectiveRate: 1.006, blocks: notFull });
+    expect(a.lowParent).toBe(true); expect(a.advice).not.toBe('wait'); expect(a.targetRate).toBe(2);
+    expect(a.cpfpChildFee).toBe(Math.ceil(2 * (141 + 110)) - 15);
+  });
+  it('package already above minimum + 1 → wait (with lowParent flag for the note)', () => {
+    const a = analyzeStuck(mkTx({ fee: 15, weight: 564 }), flat, { effectiveRate: 3, blocks: notFull });
+    expect(a.advice).toBe('wait'); expect(a.lowParent).toBe(true);
   });
 });

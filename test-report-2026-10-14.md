@@ -125,3 +125,18 @@ Unit tests: 150/150 pass. The regression harness (`.qa/live.test.ts`) passes: 27
 - **B8 (Medium; B7 is only partly fixed).** "Wait" is shown for a tx below the network's minimum fee (`position: below-minimum`) whenever the next projected block isn't full. That contradicts the page's own ETA text ("below what most queues are requiring… may be dropped"), and in practice the tx was not mined. Repro: Signet, any tx at ~0.1 sat/vB while the projected block is under 950k vB → advice `wait`. Fix: never return `wait` when `rate < fees.minimumFee` (or below 1 sat/vB, the default min relay of most nodes). Show RBF/CPFP to the target instead, and optionally note that very low-fee txs may not have reached all miners.
 - Note: FULL_BLOCK_VB = 950k assumes mainnet-style full blocks. On Signet, blocks of 100k–460k vB are normal, so the "not full" branch is almost always taken there.
 - Minor: `amount=1.2.3` still says "no scientific notation".
+
+---
+# Retest 3, 2026-10-14 20:03–20:21 (Athens), after 418e8cc
+Unit tests: 166/166 pass. Deployed bundle tx.BSqjFD05.js contains the new minimumFee logic. Pages return 200. Regression: 27 address cases unchanged; quantum verdicts unchanged (P2PK-era → exposed, P2SH/P2WSH spent → depends, P2TR/reused → exposed). All PASS.
+
+| Item | Check | Result |
+|---|---|---|
+| B8 below minimum | Fresh Signet tx **bad1d9419adc9f3ab151a4f1dec93fa36a572993eadbc4e0eacf7f2adb32e99a** (0.106 sat/vB, 141 vB, RBF, 8,000 to recipient + 10,979 change, from leftover f7498ff3…:0). Projected next block 345k vB (not full), all fee tiers 1. Advice **rbf-or-cpfp** (not wait), position below-minimum, target 1.0 (`projected`), RBF fee 156, CPFP child 236 | PASS |
+| B8 effective rate | Synthetic: own 0.5 with eff 1.0 → wait; eff 0.99 → rbf-or-cpfp (so it uses the effective rate). Own 1.0 behind 3 full projected blocks → rbf-or-cpfp, target 3.1 (median 3 + 0.1). Own 2.5 ≥ next-block min 2 → wait. No block data → target 1.2 (estimate + 0.2) | PASS |
+| At/above minimum, live | After CPFP child **da85548fd788e8f9e88f2a2bcd625b80cc7b413c10c59eb0bc3a0f44fae95948** (fee 236, 110 vB) → effective 1.006 → advice wait (sensible by the rules) | PASS (logic) |
+| Amounts | `1.2.3`, `abc`, `0x10`, empty → "Amount must be a number"; `1e-3`, `2E-5`, `1e3` → "no scientific notation"; `-1` → positive; >21M rejected | PASS |
+
+## Observation (B9, Low/Info)
+Even after the CPFP, the 1.006 sat/vB package was **not** in block 326347 (20:13:30). That block came about 8 minutes after the child, with mempool.space projecting it into the next block. This is the third time a sub-1 sat/vB parent was skipped. The likely cause is that the signet signer's node never accepted the 0.1 sat/vB parent, and 1-parent-1-child package relay doesn't always reach it. Cleanup: RBF the child to **41351ba5051ac69d9a09c1082cc5811c6c74c916737b56be0342a0215af8bdee** (fee 740, package ≈3 sat/vB). The parent and this child were **mined together in block 326348 (20:19:48 Athens), about 3 minutes later**. (Retest 2's package at the same 1.006 rate was mined in the next block, so the result is not deterministic.)
+Suggestion: when the parent's *own* rate is below minimumFee and only the package lifts it, add a note: "some miners may not have the parent; if it isn't mined in a block or two, bump higher". Or aim the CPFP target a little above the floor (e.g. +1 sat/vB).

@@ -81,6 +81,7 @@ export interface StuckAnalysis {
   spendableOutputs: number[]; // indexes of unspent, non-OP_RETURN outputs with value above dust
   targetRate: number;
   targetSource: 'projected' | 'estimate';
+  lowParent: boolean; // own rate below the minimum fee
   rbfFee?: number;
   cpfpChildFee?: number;
   childVsize: number;
@@ -103,9 +104,20 @@ const up1 = (x: number) => Math.ceil(x * 10 - 1e-9) / 10;
 /** Lowest fee rate miners/relays reliably accept: mempool.space minimumFee, default 1 sat/vB. */
 export const minFeeRate = (fees: RecommendedFees) => (isFinite(fees.minimumFee) && fees.minimumFee > 0 ? fees.minimumFee : 1);
 
-export function bumpTarget(fees: RecommendedFees, blocks?: MempoolBlock[] | null): { rate: number; source: 'projected' | 'estimate' } {
+/** Extra margin above the minimum when the parent itself pays below it (B9). */
+export const LOW_PARENT_MARGIN = 1;
+/** A parent paying below the minimum may never have reached some miners, so a package just over the floor is not reliably mined. */
+export const isLowParent = (parentOwnRate: number | undefined, fees: RecommendedFees) => parentOwnRate !== undefined && parentOwnRate < minFeeRate(fees);
+
+/**
+ * `parentOwnRate`: the stuck tx's own fee rate (not the package rate). If it is below the minimum, aim at least
+ * LOW_PARENT_MARGIN sat/vB above the minimum, because only the child lifts the package over the floor.
+ */
+export function bumpTarget(fees: RecommendedFees, blocks?: MempoolBlock[] | null, parentOwnRate?: number): { rate: number; source: 'projected' | 'estimate'; lowParent: boolean } {
   const t = rawBumpTarget(fees, blocks);
-  return { ...t, rate: Math.max(t.rate, minFeeRate(fees)) };
+  const lowParent = isLowParent(parentOwnRate, fees);
+  const floor = minFeeRate(fees) + (lowParent ? LOW_PARENT_MARGIN : 0);
+  return { ...t, rate: Math.max(t.rate, floor), lowParent };
 }
 function rawBumpTarget(fees: RecommendedFees, blocks?: MempoolBlock[] | null): { rate: number; source: 'projected' | 'estimate' } {
   const b = Array.isArray(blocks) ? blocks[0] : undefined;
@@ -135,11 +147,12 @@ export function analyzeStuck(tx: Tx, fees: RecommendedFees, opts: { effectiveRat
     .map((o, i) => ({ o, i }))
     .filter(({ o, i }) => o.scriptpubkey_type !== 'op_return' && o.value >= dustFor(o.scriptpubkey_type) && !(opts.outspends?.[i]?.spent))
     .map(({ i }) => i);
-  const target = bumpTarget(fees, opts.blocks);
+  const ownRate = feeRate(tx.fee, tx.weight / 4);
+  const target = bumpTarget(fees, opts.blocks, ownRate);
   const targetRate = target.rate;
   const position: StuckAnalysis['position'] =
     rate >= fees.fastestFee ? 'above-fast' : rate >= fees.economyFee ? 'between' : rate >= fees.minimumFee ? 'below-economy' : 'below-minimum';
-  const base = { rate, vsize, rbf, spendableOutputs, targetRate, targetSource: target.source, childVsize: CPFP_CHILD_VSIZE, position };
+  const base = { rate, vsize, rbf, spendableOutputs, targetRate, targetSource: target.source, lowParent: target.lowParent, childVsize: CPFP_CHILD_VSIZE, position };
   if (tx.status.confirmed) return { ...base, advice: 'confirmed' };
   const rbfFee = rbfReplacementFee(tx.fee, vsize, targetRate);
   const childFee = cpfpChildFee(tx.fee, vsize, CPFP_CHILD_VSIZE, targetRate);
@@ -147,7 +160,8 @@ export function analyzeStuck(tx: Tx, fees: RecommendedFees, opts: { effectiveRat
   // Within ~3 projected blocks (about 30 min) is fine to wait; without projections, use the hour estimate.
   const okToWait = hasBlocks ? blocksAhead(rate, opts.blocks!) <= 2 : rate >= fees.hourFee;
   // Below the minimum relay/mining fee a tx may never reach miners (seen on Signet), whatever the projection says.
-  if (okToWait && rate >= minFeeRate(fees)) return { ...base, advice: 'wait', rbfFee, cpfpChildFee: childFee };
+  // B9: a below-minimum parent lifted just over the floor by a child is still not reliably mined.
+  if (okToWait && rate >= minFeeRate(fees) && !(target.lowParent && rate < targetRate)) return { ...base, advice: 'wait', rbfFee, cpfpChildFee: childFee };
   const canCpfp = spendableOutputs.length > 0;
   // Under full-RBF (Bitcoin Core 28+ default) any unconfirmed tx can be replaced by whoever controls its inputs,
   // but `rbf` tells us whether it opted in, which matters for older nodes/wallets.

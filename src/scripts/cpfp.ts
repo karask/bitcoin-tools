@@ -18,7 +18,7 @@ let fees: RecommendedFees | null = null;
 let ancestors: { fee: number; vsize: number }[] = [];
 let ancestorsOk = false;
 let tip = 0;
-let nextBlock: { rate: number; source: 'projected' | 'estimate' } = { rate: 1, source: 'estimate' };
+let nextBlock: { rate: number; source: 'projected' | 'estimate'; lowParent: boolean } = { rate: 1, source: 'estimate', lowParent: false };
 
 const TYPE_NAME: Record<string, string> = { v0_p2wpkh: 'SegWit (bc1q…)', v1_p2tr: 'Taproot (bc1p…)', p2pkh: 'Legacy (1…)', p2sh: 'P2SH (3…)', v0_p2wsh: 'SegWit script (bc1q…, long)', op_return: 'OP_RETURN data', p2pk: 'P2PK', multisig: 'bare multisig' };
 
@@ -31,7 +31,7 @@ onSubmit(loadForm, async () => {
   loading(step2, 'Loading the stuck transaction from mempool.space…');
   try {
     const [tx, spends, f, anc, h, mb] = await Promise.all([getTx(txid), getOutspends(txid), getFees(), loadAncestors(() => getCpfp(txid)), getTipHeight().catch(() => 0), getMempoolBlocks().catch(() => null)]);
-    nextBlock = bumpTarget(f, mb);
+    nextBlock = bumpTarget(f, mb, tx.fee / (tx.weight / 4));
     if (tx.status.confirmed) { step2.innerHTML = verdict('ok', 'This transaction is already confirmed', '<p>Nothing to fix — no CPFP needed.</p>'); return; }
     parent = null; fees = f; tip = h;
     if (!anc.ok) {
@@ -52,7 +52,7 @@ onSubmit(loadForm, async () => {
       <input id="cpfp-dest" class="mono" placeholder="bc1q… / bc1p… / 1… / 3…" autocomplete="off" spellcheck="false" required />
       <div class="row" style="margin-top:14px">
         <div><label for="cpfp-speed">4. Target speed</label>
-          <select id="cpfp-speed"><option value="next" selected>Next block (${nextBlock.source === 'projected' ? 'projected' : 'estimate + margin'}) · ${fmtRate(nextBlock.rate)}</option><option value="fastestFee">Fast estimate · ${fmtRate(f.fastestFee)}</option><option value="halfHourFee">~30 minutes · ${fmtRate(f.halfHourFee)}</option><option value="hourFee">~1 hour · ${fmtRate(f.hourFee)}</option><option value="economyFee">Within a day · ${fmtRate(f.economyFee)}</option><option value="custom">Custom sat/vB</option></select></div>
+          <select id="cpfp-speed"><option value="next" selected>Next block (${nextBlock.lowParent ? 'minimum + 1, low-fee parent' : nextBlock.source === 'projected' ? 'projected' : 'estimate + margin'}) · ${fmtRate(nextBlock.rate)}</option><option value="fastestFee">Fast estimate · ${fmtRate(f.fastestFee)}</option><option value="halfHourFee">~30 minutes · ${fmtRate(f.halfHourFee)}</option><option value="hourFee">~1 hour · ${fmtRate(f.hourFee)}</option><option value="economyFee">Within a day · ${fmtRate(f.economyFee)}</option><option value="custom">Custom sat/vB</option></select></div>
         <div id="cpfp-custom-wrap" hidden style="flex:0 1 160px"><label for="cpfp-custom">sat/vB</label><input id="cpfp-custom" inputmode="decimal" placeholder="e.g. 12" /></div>
         <div style="flex:0 1 auto"><button type="submit">Build PSBT</button></div>
       </div></form>
@@ -98,7 +98,7 @@ async function build() {
       + `<h3>What to do now</h3><ol>
         <li>Open the wallet that holds output #${vout} — e.g. <strong>Sparrow</strong>, <strong>Electrum</strong>, or the companion app of your hardware wallet — and choose “Load / import PSBT”. Paste the text, open the .psbt file, or scan the QR.</li>
         <li><strong>Check the amounts</strong> your wallet shows: one input (${fmtSats(o.value)}), one output to your address (${fmtSats(safe.sendValue)}), fee ${fmtSats(pkg.childFee)}.</li>
-        <li>Sign it, then broadcast it from your wallet. This site never broadcasts.</li></ol>
+        <li>Sign it, then broadcast it from your wallet. This site never broadcasts.</li></ol>${parent.fee / (parent.weight / 4) < (fees.minimumFee || 1) ? `<p class="small">The stuck transaction on its own pays less than the network minimum, so some miners may never have received it — and then they cannot mine your bump either. The “Next block” option therefore aims at least 1 sat/vB above the minimum. <strong>If it is still unconfirmed after a block or two, bump again with a higher fee.</strong></p>` : ''}
         <p class="small muted">Hardware wallets sometimes need key-derivation (BIP-32) details in the PSBT, which this site cannot know because it never asks for your keys or xpub. Wallets like Sparrow and Electrum usually recognise their own output and add these details before sending it to the device. If your wallet says it cannot sign, use its own CPFP / “Child pays for parent” feature instead.</p>`
       + `<label for="cpfp-psbt">PSBT (base64)</label><input id="cpfp-psbt" class="mono" readonly value="${psbt.base64}" />
         <div class="row" style="margin-top:10px"><div style="flex:0 1 auto"><button type="button" id="cpfp-copy">Copy PSBT</button></div><div style="flex:0 1 auto"><button type="button" class="secondary" id="cpfp-dl">Download .psbt</button></div></div>
