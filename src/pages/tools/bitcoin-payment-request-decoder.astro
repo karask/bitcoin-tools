@@ -1,0 +1,39 @@
+---
+import Tool from '../../layouts/Tool.astro';
+const faq = [
+  { q: 'What is a BIP-21 URI?', a: 'A link that starts with bitcoin: and carries an on-chain address plus optional amount, label and message. Some also include a lightning= parameter with a Lightning invoice as a preferred option.' },
+  { q: 'What is a BOLT11 invoice?', a: 'The standard Lightning payment request. It starts with lnbc (mainnet), lntb (testnet), lntbs (signet) or lnbcrt (regtest), optionally preceded by lightning:. It encodes amount, expiry, a payment hash, a description and a signature from the payee’s node.' },
+  { q: 'Does this tool talk to any Lightning node?', a: 'No. Decoding and signature checks happen entirely in your browser. It cannot tell whether an invoice has already been paid, and it never contacts LNURL or Lightning Address servers.' },
+  { q: 'What does a valid signature mean?', a: 'It means the invoice was produced by the node whose public key is shown and has not been altered since. It does not tell you who runs that node or whether you should trust them.' },
+  { q: 'Why is an expired invoice a hard stop?', a: 'After the expiry time, honest recipients will not settle the payment. Paying it usually fails and can leave funds in limbo in buggy wallets. Always ask for a fresh invoice.' },
+  { q: 'Can it decode LNURL, BOLT12 or Lightning addresses?', a: 'Not yet. Those formats need contacting a server. This tool sticks to what can be verified offline: BIP-21 and BOLT11.' },
+];
+---
+<Tool slug="bitcoin-payment-request-decoder" title="Bitcoin Payment Request Decoder — BIP-21 & Lightning BOLT11 (offline)" description="Decode a bitcoin: URI or Lightning BOLT11 invoice into plain English: amount, expiry, network, description and signature check. Runs entirely in your browser — never contacts a Lightning node." h1="Payment request decoder" lead="Paste a bitcoin: link or a Lightning invoice and get a plain-English summary: how much, what for, when it expires, and whether the signature checks out. Entirely offline." faq={faq}>
+  <Fragment slot="tool">
+    <form id="pr-form">
+      <label for="pr-input">Payment request</label>
+      <div class="row">
+        <input id="pr-input" class="mono" placeholder="bitcoin:… or lnbc… / lightning:lnbc…" autocomplete="off" spellcheck="false" required />
+        <div style="flex:0 1 auto"><button type="submit">Decode</button></div>
+      </div>
+    </form>
+    <p class="small muted">🔒 Decoded locally. Optional USD/EUR conversion fetches only the price from mempool.space — your invoice is never sent.</p>
+    <div id="pr-result" class="result" aria-live="polite"></div>
+  </Fragment>
+
+  <h2>On-chain links and Lightning invoices</h2>
+  <p>People ask to be paid in two common ways. An <strong>on-chain request</strong> is usually a BIP-21 link: <code>bitcoin:</code> plus an address and, optionally, an amount and a note. A <strong>Lightning request</strong> is a BOLT11 invoice: a long string starting with <code>lnbc</code> (or <code>lntb</code> on testnet) that a Lightning wallet can pay in seconds.</p>
+  <p>Both can look intimidating. This tool unpacks them in your browser: how much is asked, what it claims to be for, which network it is on, and — for Lightning — when it expires and whether its signature is valid. It never opens a connection to a Lightning node, so it cannot spy on you and cannot tell whether an invoice was already paid.</p>
+  <h3>BIP-21 details</h3>
+  <p>The address is checked with the same rules as the address checker. Amounts are BTC decimals. Labels and messages are percent-decoded. If the link includes a <code>lightning=</code> parameter, both the on-chain and Lightning parts are shown — pay only one of them. Parameters that start with <code>req-</code> are required by BIP-21; if this tool does not understand one, it tells you the whole request must be treated as invalid.</p>
+  <h3>BOLT11 details</h3>
+  <p>A Lightning invoice carries a timestamp, an expiry (default one hour if omitted), a payment hash, usually a human description (or a hash of one), and a signature from the payee’s node public key. Amounts use multipliers: <code>m</code> (milli), <code>u</code> (micro), <code>n</code> (nano), <code>p</code> (pico) bitcoin, converted here to sats and millisats. Route hints and feature bits are listed under technical details for those who need them.</p>
+  <h3>Expired means stop</h3>
+  <p>Once the expiry time has passed, do not pay the invoice. Ask for a new one. Paying an expired invoice is a common source of confusion and stuck payments.</p>
+
+  <Fragment slot="example">
+    <p>The classic BOLT11 donation invoice from the specification (prefix <code>lnbc1pvjluez…</code>, no amount) decodes as a mainnet Lightning request for any amount, description “Please consider supporting this project”, created 1 June 2017, with a recoverable payee public key and a valid signature. A BIP-21 link such as <code>bitcoin:bc1q…?amount=0.01&amp;label=Tips</code> shows a 0.01 BTC on-chain request to that address, labelled “Tips”.</p>
+  </Fragment>
+</Tool>
+<script>import '../../scripts/decoder.ts';</script>

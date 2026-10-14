@@ -1,0 +1,50 @@
+---
+import Tool from '../../layouts/Tool.astro';
+const faq = [
+  { q: 'What is a bitcoin: payment link (BIP-21)?', a: 'A short link that starts with bitcoin: and carries an address, plus optional amount, label and message. Most wallets understand it when you open or scan it, so the recipient’s address and the amount are filled in for you.' },
+  { q: 'Why would I upper-case the address?', a: 'Bech32 addresses (bc1…) can be written entirely in upper case. QR codes encode upper-case letters more densely, so the code is smaller and often easier to scan. Legacy addresses (1… / 3…) are case-sensitive and must not be upper-cased.' },
+  { q: 'Does this tool send my address anywhere?', a: 'No. Building the payment link and QR code happens entirely in your browser. The live price is fetched from mempool.space only if you choose to enter the amount in USD or EUR.' },
+  { q: 'Can someone change the amount after I share the QR?', a: 'No. The amount is baked into the payment link inside the QR. If you change the amount, you must generate a new QR. Always scan your own QR with a wallet before sharing it.' },
+  { q: 'What if my wallet cannot scan it?', a: 'Try the downloadable PNG at a larger size, use the upper-case option for bech32 addresses, or paste the bitcoin: link instead. Very long labels or messages make denser QR codes that some cameras struggle with.' },
+  { q: 'Is the label or message shown to the sender?', a: 'Usually yes — wallets that support BIP-21 show the label and message when they open the link. Do not put private information in them; anyone who sees the QR can read them.' },
+];
+---
+<Tool slug="bitcoin-qr-code-generator" title="Bitcoin QR Code Generator — BIP-21 receive address QR (private)" description="Generate a BIP-21 bitcoin: payment link and QR code from any Bitcoin address, with optional amount, label and message. Runs in your browser; download PNG or SVG." h1="Receive address QR" lead="Turn a Bitcoin address into a payment link and a scannable QR code. Add an amount and a label if you like — everything is built in your browser." faq={faq}>
+  <Fragment slot="tool">
+    <form id="qr-form">
+      <label for="qr-addr">Receive address</label>
+      <input id="qr-addr" class="mono" placeholder="bc1q… / bc1p… / 1… / 3…" autocomplete="off" spellcheck="false" required />
+      <div class="row" style="margin-top:14px">
+        <div><label for="qr-amount">Amount (optional)</label><input id="qr-amount" inputmode="decimal" placeholder="Leave blank for any amount" /></div>
+        <div style="flex:0 1 140px"><label for="qr-unit">Unit</label>
+          <select id="qr-unit"><option value="btc">BTC</option><option value="sats">sats</option><option value="usd">USD</option><option value="eur">EUR</option></select></div>
+      </div>
+      <div class="row">
+        <div><label for="qr-label">Label (optional)</label><input id="qr-label" placeholder="e.g. Coffee" maxlength="100" /></div>
+        <div><label for="qr-message">Message (optional)</label><input id="qr-message" placeholder="Shown to the sender" maxlength="200" /></div>
+      </div>
+      <div class="row">
+        <div style="flex:0 1 220px"><label for="qr-upper">QR density</label>
+          <select id="qr-upper"><option value="off" selected>Normal (lower-case)</option><option value="on">Compact (upper-case bech32)</option></select></div>
+        <div style="flex:0 1 auto"><button type="submit">Make QR</button></div>
+      </div>
+    </form>
+    <p class="small muted">🔒 Built locally. The address never leaves your browser unless you pick a fiat unit (then only the price is fetched).</p>
+    <div id="qr-result" class="result" aria-live="polite"></div>
+  </Fragment>
+
+  <h2>Payment links and QR codes</h2>
+  <p>Sharing a bare address works, but a <strong>payment request</strong> is clearer. BIP-21 defines a simple link that starts with <code>bitcoin:</code>, followed by the address and optional parameters: an amount in bitcoin, a short label (often a name or order number) and a free-form message. When someone scans a QR of that link, their wallet can fill everything in for them.</p>
+  <p>This tool builds that link, checks the address first so a typo never becomes a QR, and draws the QR code in your browser. Nothing is uploaded. You can copy the link, or download the code as PNG or SVG to print or embed.</p>
+  <h3>Amounts</h3>
+  <p>BIP-21 amounts are written in BTC as a plain decimal — never in scientific notation, and never with more than eight decimal places (one satoshi). Leaving the amount blank means the sender chooses how much to pay, which is useful for donations.</p>
+  <h3>Upper-case bech32</h3>
+  <p>Native SegWit and Taproot addresses can be written entirely in upper case. QR codes encode that denser alphanumeric alphabet more efficiently, so the code is physically smaller. Legacy addresses starting with 1 or 3 are case-sensitive and must not be upper-cased; the tool refuses to do so.</p>
+  <h3>What a QR cannot guarantee</h3>
+  <p>A valid QR only means the string inside is what you typed. Before you share it, scan it yourself and compare the address and amount with what your wallet shows. Malware that tampers with QR codes is rare but not unheard of.</p>
+
+  <Fragment slot="example">
+    <p>Address <code>bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq</code>, amount 0.0015 BTC, label “Lunch”. The tool produces <code>bitcoin:bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq?amount=0.0015&amp;label=Lunch</code> and a QR encoding that exact string. With upper-case mode it becomes <code>BITCOIN:BC1Q…MDQ?AMOUNT=0.0015&amp;LABEL=LUNCH</code> — smaller on paper, same payment.</p>
+  </Fragment>
+</Tool>
+<script>import '../../scripts/qr.ts';</script>

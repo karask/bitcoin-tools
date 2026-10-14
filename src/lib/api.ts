@@ -26,6 +26,12 @@ export const getTx = (txid: string) => get<import('./tx').Tx>(`/tx/${txid}`);
 export const getOutspends = (txid: string) => get<{ spent: boolean }[]>(`/tx/${txid}/outspends`);
 export const getCpfp = (txid: string) => get<{ effectiveFeePerVsize?: number; ancestors?: unknown[] }>(`/v1/cpfp/${txid}`);
 export const getAddress = (addr: string) => get<import('./quantum').AddressStats & { address: string }>(`/address/${addr}`);
+export const getAddressTxs = (addr: string) => get<import('./tx').Tx[]>(`/address/${addr}/txs`);
+/** Like getTx but returns null on 404 (for payment tracker). */
+export async function getTxOrNull(txid: string): Promise<import('./tx').Tx | null> {
+  try { return await getTx(txid); }
+  catch (e) { if (e instanceof ApiError && /Not found/.test(e.message)) return null; throw e; }
+}
 export const getPrices = () => get<Prices>('/v1/prices');
 export async function getHistoricalPrice(unix: number): Promise<{ USD: number; EUR: number; time: number } | null> {
   const r = await get<{ prices: { time: number; USD: number; EUR: number }[] }>(`/v1/historical-price?currency=EUR&timestamp=${unix}`);
