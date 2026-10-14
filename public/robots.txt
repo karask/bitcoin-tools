@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://karask.github.io/bitcoin-tools/sitemap-index.xml

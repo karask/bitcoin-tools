@@ -1,0 +1,47 @@
+---
+import Tool from '../../layouts/Tool.astro';
+const faq = [
+  { q: 'What is sat/vB?', a: 'Satoshis per virtual byte. Bitcoin fees are not based on the amount you send but on how much block space your transaction uses. A sat is one hundred-millionth of a bitcoin, and a virtual byte (vbyte) is the unit of transaction size. Multiply the fee rate by your transaction size to get the total fee.' },
+  { q: 'Why does sending $10 cost the same fee as sending $1 million?', a: 'Because miners charge for space, not value. A simple transaction takes roughly the same space no matter how much it moves. What makes a transaction bigger is the number of inputs (coins being spent) and outputs (recipients).' },
+  { q: 'What happens if I pay too little?', a: 'Your transaction waits in the mempool until block space is cheap enough. If it waits too long, nodes may drop it and the coins stay with you. If your wallet supports Replace-by-Fee, you can usually raise the fee later. Our stuck transaction helper explains the options.' },
+  { q: 'Are these estimates guaranteed?', a: 'No. They are based on the transactions currently waiting, and new transactions keep arriving. The fast estimate is very likely to make the next block or two; lower tiers are more of a bet on the network getting quieter.' },
+  { q: 'Where does this data come from?', a: 'From the public mempool.space API, fetched directly by your browser. Prices for the fiat estimate also come from mempool.space.' },
+];
+---
+<Tool slug="bitcoin-fee-checker" title="Bitcoin Fee Checker — what fee to pay right now (sat/vB, USD, EUR)" description="Live Bitcoin fee estimates in plain English: what to pay to confirm in ~10 minutes, ~1 hour or ~1 day, in sat/vB and total cost in sats, USD and EUR." h1="Bitcoin fee checker" lead="How much should you pay to get your bitcoin transaction confirmed? Here are live estimates for fast, normal and patient payments — in sats, dollars and euros." faq={faq}>
+  <Fragment slot="tool">
+    <div class="row">
+      <div><label for="fee-kind">Wallet / address type</label>
+        <select id="fee-kind">
+          <option value="p2wpkh" selected>Native SegWit (bc1q…) — most common</option>
+          <option value="p2tr">Taproot (bc1p…)</option>
+          <option value="p2sh-p2wpkh">Wrapped SegWit (3…)</option>
+          <option value="p2pkh">Legacy (1…)</option>
+        </select></div>
+      <div style="flex:0 1 110px"><label for="fee-in">Inputs</label><input id="fee-in" type="number" min="1" max="500" value="1" inputmode="numeric" /></div>
+      <div style="flex:0 1 110px"><label for="fee-out">Outputs</label><input id="fee-out" type="number" min="1" max="500" value="2" inputmode="numeric" /></div>
+      <div style="flex:0 1 auto"><button type="button" id="fee-refresh" class="secondary">Refresh</button></div>
+    </div>
+    <p class="small muted">Not sure? Leave the defaults: one coin in, a payment plus change out — the most common transaction (about 141 vbytes).</p>
+    <div id="fee-result" class="result" aria-live="polite"></div>
+  </Fragment>
+
+  <h2>How Bitcoin fees work</h2>
+  <p>Every bitcoin transaction is confirmed when a miner includes it in a block. Blocks arrive about every ten minutes and have limited space, so when more people want to transact than fits, miners pick the transactions that pay the most <em>per unit of space</em>. That is why fees are quoted as a <strong>fee rate</strong> in satoshis per virtual byte (sat/vB), rather than as a percentage of the amount you send.</p>
+  <p>Your total fee is simply the fee rate multiplied by the size of your transaction. Size depends on how your transaction is built, not on its value: each <strong>input</strong> (a previous payment you received and are now spending) and each <strong>output</strong> (a recipient, plus usually your own change) adds bytes. A wallet that holds many small payments may need many inputs to send a larger amount, which makes the transaction bigger and more expensive.</p>
+  <h3>The three speeds</h3>
+  <p><strong>Fast</strong> aims for the next block, typically about ten minutes. <strong>Normal</strong> aims for confirmation within roughly an hour. <strong>Patient</strong> is the cheapest rate that tends to confirm within a day, when the network quiets down. Block times are random, so even a “fast” transaction can occasionally take longer if the next block is slow to be found.</p>
+  <h3>Address type matters</h3>
+  <p>Newer address formats are more space-efficient. Spending from a native SegWit (bc1q…) or Taproot (bc1p…) address costs noticeably less than spending from an old legacy address starting with 1. If you are choosing a wallet today, a modern format will save you money over time.</p>
+  <h3>Tips to pay less</h3>
+  <ul>
+    <li>If you are not in a hurry, choose a lower fee — it will usually confirm overnight or at the weekend, when demand is lower.</li>
+    <li>Use a wallet that supports Replace-by-Fee (RBF), so you can start low and raise the fee if needed.</li>
+    <li>Consolidate many small coins into one when fees are very low, so future payments need fewer inputs.</li>
+  </ul>
+
+  <Fragment slot="example">
+    <p>Suppose the “Normal” rate is 8 sat/vB and you send from a native SegWit wallet with one input and two outputs (payment + change). That transaction is about 141 vbytes, so the fee is 8 × 141 = <strong>1,128 sats</strong>. At a price of $80,000 per bitcoin, that is 1,128 ÷ 100,000,000 × 80,000 ≈ <strong>$0.90</strong>. The same payment from a legacy wallet (about 226 vbytes) would cost 1,808 sats.</p>
+  </Fragment>
+</Tool>
+<script>import '../../scripts/fees.ts';</script>

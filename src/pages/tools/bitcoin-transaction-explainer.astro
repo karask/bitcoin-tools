@@ -1,0 +1,41 @@
+---
+import Tool from '../../layouts/Tool.astro';
+const faq = [
+  { q: 'Can this tool tell me who sent or received the bitcoin?', a: 'No. Bitcoin shows addresses and amounts, not names. It is impossible to know who controls an address from the blockchain alone.' },
+  { q: 'What is “change”?', a: 'Bitcoin spends whole coins. If you pay 0.3 BTC using a 1 BTC coin, the transaction sends 0.3 BTC to the recipient and returns about 0.7 BTC (minus the fee) to an address in your own wallet. That second output is change.' },
+  { q: 'How does the tool guess which output is change?', a: 'It uses common heuristics: an output going back to an input address, an output of the same type as the inputs when the other differs, or the non-round amount when the other is round. These are hints, not proof, and the tool always says so.' },
+  { q: 'What do size, vsize and weight mean?', a: 'Size is the raw byte length. Weight counts witness (signature) data at 1 unit per byte and everything else at 4 units. Virtual size (vsize) is weight divided by 4 and is what fee rates are measured against.' },
+  { q: 'What is OP_RETURN?', a: 'A way to embed a small amount of data in a transaction. Such outputs carry no spendable bitcoin. The tool shows the data as text if it is readable.' },
+  { q: 'How many confirmations are enough?', a: 'One confirmation makes reversal very unlikely for everyday amounts. Many services wait for 3 to 6 confirmations for larger payments.' },
+];
+---
+<Tool slug="bitcoin-transaction-explainer" title="Bitcoin Transaction Explainer — understand any txid in plain English" description="Paste a Bitcoin transaction ID and get a plain-English summary: amounts, likely payment and change, fee and fee rate, size, confirmations, RBF, locktime and OP_RETURN data." h1="Transaction explainer" lead="Paste any Bitcoin transaction ID and get a plain-English explanation of what happened: how much moved, to how many places, what fee was paid, and whether it’s confirmed." faq={faq}>
+  <Fragment slot="tool">
+    <form id="tx-form">
+      <label for="tx-input">Transaction ID (txid)</label>
+      <div class="row"><input id="tx-input" class="mono" placeholder="64 hex characters" autocomplete="off" spellcheck="false" required />
+      <div style="flex:0 1 auto"><button type="submit">Explain</button></div></div>
+    </form>
+    <p class="small muted">The txid is sent to mempool.space to fetch the transaction. Mainnet only. Try the first Bitcoin payment between people: <a href="?q=f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16">Satoshi → Hal Finney</a>.</p>
+    <div id="tx-result" class="result" aria-live="polite"></div>
+  </Fragment>
+
+  <h2>How to read a Bitcoin transaction</h2>
+  <p>A Bitcoin transaction is a set of <strong>inputs</strong> and <strong>outputs</strong>. Inputs are earlier payments that the sender received and is now spending. Outputs are the new destinations — usually the recipient, plus an output returning leftover funds to the sender as <strong>change</strong>. Because coins are spent whole, change is very common: paying 0.3 BTC from a 1 BTC coin creates a 0.3 BTC output and a roughly 0.7 BTC change output.</p>
+  <p>The difference between the total of the inputs and the total of the outputs is the <strong>fee</strong>, which goes to the miner who includes the transaction in a block. Dividing the fee by the transaction’s virtual size gives the fee rate in sat/vB, which is what miners compare when deciding what to include.</p>
+  <h3>Change detection is guesswork</h3>
+  <p>The blockchain never labels which output is the payment and which is change. Analysts use heuristics: change often goes back to the same address type as the inputs, payments are often round numbers, and careless wallets sometimes send change straight back to the input address. This tool applies those clues but always uses hedged language — privacy-conscious wallets deliberately break these patterns, and batch payments or CoinJoins have many outputs with no clear change.</p>
+  <h3>Other things worth knowing</h3>
+  <ul>
+    <li><strong>Confirmations</strong> count how many blocks have been built on top of the block containing the transaction. More confirmations mean it is more deeply settled.</li>
+    <li><strong>SegWit and Taproot</strong> move signature data into a discounted “witness” section, making transactions cheaper.</li>
+    <li><strong>RBF signalling</strong> means the sender allowed the transaction to be replaced with a higher fee while unconfirmed.</li>
+    <li><strong>Locktime</strong> can prevent a transaction from being mined before a certain block height or time. Many wallets set it to the current block height as a minor security measure.</li>
+    <li><strong>OP_RETURN</strong> outputs embed a small amount of data and carry no value.</li>
+  </ul>
+
+  <Fragment slot="example">
+    <p>Transaction <code>f4184fc5…9e16</code> (block 170, January 2009) spent one 50 BTC coin and created two outputs: <strong>10 BTC to Hal Finney</strong> and <strong>40 BTC back to Satoshi</strong>. No fee was paid. Both outputs are pay-to-public-key, so the tool can’t use type-based clues — and both amounts are round, so it declines to guess which one is change. That honesty is deliberate: our story comes from history, not from the blockchain itself.</p>
+  </Fragment>
+</Tool>
+<script>import '../../scripts/explain.ts';</script>

@@ -1,0 +1,18 @@
+---
+import Base from '../layouts/Base.astro';
+import { REPO } from '../lib/tools';
+---
+<Base title="About — Bitcoin Tools" description="Bitcoin Tools is a free, open-source set of plain-English Bitcoin tools built by Kostas Karasavvas, author of python-bitcoin-utils.">
+  <div class="prose">
+  <h1>About</h1>
+  <p>Bitcoin Tools is a free collection of simple Bitcoin utilities for everyday users. Each tool gives a clear answer first and explains it in plain English, with the technical details one click away for those who want them.</p>
+  <p>It is built by <a href="https://kkarasavvas.com">Kostas Karasavvas</a>, a Bitcoin developer and educator and the author of <a href="https://github.com/karask/python-bitcoin-utils">python-bitcoin-utils</a>, a widely used Python library for working with Bitcoin transactions and scripts.</p>
+  <h2>Principles</h2>
+  <ul>
+    <li><strong>Private by design.</strong> No backend, no accounts, no analytics, no cookies. Anything that can be computed locally (like address validation) is.</li>
+    <li><strong>Never your keys.</strong> No tool asks for a seed phrase or private key. If any website asks you for one, close it.</li>
+    <li><strong>Honest answers.</strong> Where something cannot be known for certain (for example, which output is change), the tools say so.</li>
+    <li><strong>Open source.</strong> The code is MIT-licensed on <a href={REPO}>GitHub</a>. Issues and suggestions are welcome.</li>
+  </ul>
+  </div>
+</Base>

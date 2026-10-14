@@ -1,0 +1,32 @@
+---
+import Base from './Base.astro';
+import { TOOLS } from '../lib/tools';
+interface Props { title: string; description: string; h1: string; lead: string; slug: string; faq: { q: string; a: string }[] }
+const { title, description, h1, lead, slug, faq } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const url = new URL(Astro.url.pathname, Astro.site).toString();
+const jsonld = [
+  { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
+  { '@context': 'https://schema.org', '@type': 'WebApplication', name: h1, url, applicationCategory: 'FinanceApplication', operatingSystem: 'Any', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } },
+];
+const others = TOOLS.filter((t) => t.slug !== slug);
+---
+<Base title={title} description={description} jsonld={jsonld}>
+  <div class="crumbs"><a href={base}>Tools</a> / {h1}</div>
+  <h1>{h1}</h1>
+  <p class="lead">{lead}</p>
+  <section class="panel" aria-label="Tool"><slot name="tool" /></section>
+  <article class="prose">
+    <slot />
+    <h2>Worked example</h2>
+    <slot name="example" />
+    <h2>Frequently asked questions</h2>
+    <div class="faq">
+      {faq.map((f) => <details><summary>{f.q}</summary><p>{f.a}</p></details>)}
+    </div>
+  </article>
+  <h2>More tools</h2>
+  <div class="grid">
+    {others.map((t) => <a class="card" href={`${base}tools/${t.slug}/`}><span class="icon" aria-hidden="true">{t.icon}</span><h3>{t.name}</h3><p>{t.blurb}</p></a>)}
+  </div>
+</Base>

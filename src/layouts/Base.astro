@@ -1,0 +1,42 @@
+---
+import '../styles/global.css';
+import { REPO } from '../lib/tools';
+interface Props { title: string; description: string; jsonld?: object[] }
+const { title, description, jsonld = [] } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <link rel="canonical" href={canonical} />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content={canonical} />
+  <meta name="theme-color" content="#f7931a" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://mempool.space; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'self'" />
+  <meta name="referrer" content="no-referrer" />
+  <link rel="icon" href={`${base}favicon.svg`} type="image/svg+xml" />
+  <link rel="sitemap" href={`${base}sitemap-index.xml`} />
+  {jsonld.map((j) => <script type="application/ld+json" set:html={JSON.stringify(j)} />)}
+</head>
+<body>
+  <a class="sr-only" href="#main">Skip to content</a>
+  <header class="site"><div class="wrap">
+    <a class="brand" href={base}><span class="logo" aria-hidden="true">₿</span> Bitcoin Tools</a>
+    <nav class="top" aria-label="Main">
+      <a href={base}>Tools</a><a href={`${base}privacy/`}>Privacy</a><a href={`${base}about/`}>About</a>
+    </nav>
+  </div></header>
+  <main id="main"><div class="wrap"><slot /></div></main>
+  <footer class="site"><div class="wrap">
+    <p>Free, open-source Bitcoin tools. No accounts, no tracking, no keys. Everything runs in your browser; live data comes from the public <a href="https://mempool.space">mempool.space</a> API. <a href={`${base}privacy/`}>Privacy</a> · <a href={REPO}>Source on GitHub</a> · <a href={`${base}about/`}>About</a></p>
+    <p class="small">Nothing here is financial advice. Always double-check before sending bitcoin.</p>
+  </div></footer>
+</body>
+</html>

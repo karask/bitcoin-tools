@@ -1,0 +1,24 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Privacy — Bitcoin Tools" description="Exactly what Bitcoin Tools sends to mempool.space, and when. No analytics, no cookies, no backend.">
+  <div class="prose">
+  <h1>Privacy</h1>
+  <p>This site is static: there is no server of ours that receives anything you type. There are no analytics, trackers, cookies or third-party scripts. The page itself is served by GitHub Pages, which, like any web host, can see your IP address when you load it.</p>
+  <h2>What is sent to mempool.space, and when</h2>
+  <p>Some tools need live blockchain data. Those requests go directly from your browser to the public <a href="https://mempool.space">mempool.space</a> API, which will see your IP address and what you looked up. Specifically:</p>
+  <table>
+    <thead><tr><th>Tool</th><th>What is sent</th><th>When</th></tr></thead>
+    <tbody>
+      <tr><td>Fee checker</td><td>Request for current fee rates and BTC price</td><td>On page load and on refresh</td></tr>
+      <tr><td>Stuck transaction helper</td><td>The transaction ID you enter; fee rates</td><td>When you press “Check”</td></tr>
+      <tr><td>Address checker</td><td>Nothing — validation is local. The address is sent only if you press the optional “Look up balance” button</td><td>Only on that button</td></tr>
+      <tr><td>Transaction explainer</td><td>The transaction ID you enter; BTC price</td><td>When you press “Explain”</td></tr>
+      <tr><td>Converter</td><td>Request for the current price, and the date you pick for historical prices</td><td>On page load / when you look up a date</td></tr>
+      <tr><td>Quantum exposure checker</td><td>The address you enter (needed to see whether it has been spent from)</td><td>When you press “Check”</td></tr>
+    </tbody>
+  </table>
+  <p>Looking up your own addresses or transactions on any public service can link them to your IP address. If that matters to you, use Tor or a VPN, or run your own node with a mempool instance.</p>
+  <p>We never ask for private keys or seed phrases, and nothing on this site can move your bitcoin.</p>
+  </div>
+</Base>

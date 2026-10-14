@@ -1,0 +1,42 @@
+---
+import Tool from '../../layouts/Tool.astro';
+const faq = [
+  { q: 'Does this tool send my address anywhere?', a: 'No. Validation happens entirely in your browser using the same checksum rules wallets use. Only if you press the optional “Look up balance” button is the address sent to mempool.space.' },
+  { q: 'Can a valid address still be the wrong one?', a: 'Yes. A valid format only proves there is no typo. It cannot tell you who controls the address. Clipboard-hijacking malware can swap an address for a different valid one, so always compare the first and last few characters with the recipient.' },
+  { q: 'What happens if I send to a mistyped address?', a: 'Almost always, your wallet refuses because the checksum fails. The checksums used by Bitcoin addresses make it extremely unlikely that a random typo produces another valid address.' },
+  { q: 'What is the difference between bc1q and bc1p addresses?', a: 'bc1q addresses are native SegWit version 0, using the bech32 checksum. bc1p addresses are Taproot (SegWit version 1), using the newer bech32m checksum defined in BIP-350. Both are modern, low-fee formats.' },
+  { q: 'Why does my address start with tb1, m, n or 2?', a: 'Those are test-network addresses (testnet or signet). Test coins have no value, and real bitcoin should never be sent to them.' },
+  { q: 'Are upper-case bc1 addresses valid?', a: 'Yes, if the whole address is upper case. Upper case makes QR codes smaller. Mixing upper- and lower-case letters is invalid.' },
+];
+---
+<Tool slug="bitcoin-address-checker" title="Bitcoin Address Checker — validate any BTC address (private, in-browser)" description="Check if a Bitcoin address is valid, which network and type it is (legacy, SegWit, Taproot), and catch typos and wrong-network mistakes. Runs entirely in your browser." h1="Bitcoin address checker" lead="Make sure an address is valid before you send. This checks the format, network and type — and catches typos — entirely in your browser." faq={faq}>
+  <Fragment slot="tool">
+    <form id="addr-form">
+      <label for="addr-input">Bitcoin address</label>
+      <div class="row"><input id="addr-input" class="mono" placeholder="bc1q… / bc1p… / 1… / 3…" autocomplete="off" spellcheck="false" required />
+      <div style="flex:0 1 auto"><button type="submit">Check</button></div></div>
+    </form>
+    <p class="small muted">🔒 Checked locally. Nothing is sent anywhere unless you choose to look up the balance.</p>
+    <div id="addr-result" class="result" aria-live="polite"></div>
+  </Fragment>
+
+  <h2>What makes a Bitcoin address valid?</h2>
+  <p>A Bitcoin address is a short, human-shareable way to describe where coins should go. It is not just a random string: every address contains a <strong>checksum</strong>, a few characters computed from the rest of the address. If you change even a single character, the checksum no longer matches, and wallets refuse to send. This tool runs exactly that check in your browser.</p>
+  <h3>The address formats you will see</h3>
+  <ul>
+    <li><strong>Legacy (starts with 1)</strong> — the original format (P2PKH). Universally supported but more expensive to spend from.</li>
+    <li><strong>Script hash (starts with 3)</strong> — P2SH, used for wrapped SegWit wallets and multisig.</li>
+    <li><strong>Native SegWit (starts with bc1q)</strong> — P2WPKH (42 characters) or P2WSH (62 characters, usually multisig). Cheaper fees, very widely supported.</li>
+    <li><strong>Taproot (starts with bc1p)</strong> — P2TR, the newest common format, activated in 2021.</li>
+  </ul>
+  <p>Legacy and P2SH addresses use <strong>Base58Check</strong> encoding, which avoids look-alike characters such as 0, O, I and l. Newer addresses use <strong>bech32</strong> (BIP-173) for SegWit version 0 and <strong>bech32m</strong> (BIP-350) for Taproot and later versions. Bech32 is designed to detect common typing mistakes, and it never contains the characters 1 (after the prefix), b, i or o.</p>
+  <h3>Wrong network</h3>
+  <p>Bitcoin has test networks — testnet, signet and regtest — where coins have no value. Their addresses use different prefixes (tb1, bcrt1, m, n or 2). If someone gives you a test address for a real payment, something is wrong. Note that testnet and signet share the same address format, so they cannot be told apart from the address alone.</p>
+  <h3>What a checker cannot tell you</h3>
+  <p>A valid address may still belong to the wrong person. Malware sometimes replaces copied addresses with an attacker’s address, which will pass every format check. Always verify the address through a second channel, and compare it carefully on your hardware wallet screen if you use one.</p>
+
+  <Fragment slot="example">
+    <p>The address <code>bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq</code> is a valid mainnet native SegWit (P2WPKH) address. Change the last character to <code>r</code> and the checker reports a checksum error. Change it to <code>o</code> and it reports an impossible character — a classic “o instead of 0” typo. Paste <code>tb1q…</code> and you are warned it is a test-network address.</p>
+  </Fragment>
+</Tool>
+<script>import '../../scripts/address.ts';</script>

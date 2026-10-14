@@ -1,0 +1,46 @@
+---
+import Tool from '../../layouts/Tool.astro';
+const faq = [
+  { q: 'How many sats are in one bitcoin?', a: 'Exactly 100,000,000. One sat (satoshi) is 0.00000001 BTC, the smallest unit recorded on the Bitcoin blockchain.' },
+  { q: 'Why are prices slightly different from my exchange?', a: 'Each exchange has its own price, and they differ a little. This converter uses the reference price published by mempool.space, which is fine for estimates but not for trading.' },
+  { q: 'How far back do historical prices go?', a: 'Reliable market prices start around mid-2010, when the first exchanges appeared. Earlier dates return no data.' },
+  { q: 'What price is used for a historical date?', a: 'A daily reference price from mempool.space for that day. Real prices moved during the day, sometimes a lot.' },
+  { q: 'Who named the satoshi?', a: 'The unit is named after Satoshi Nakamoto, Bitcoin’s pseudonymous creator. The name became popular in the community years after launch.' },
+];
+---
+<Tool slug="sats-btc-converter" title="Sats to BTC Converter — sats, bitcoin, USD and EUR (live and historical)" description="Convert between satoshis, BTC, US dollars and euros at live prices, and look up the bitcoin price on any past date. Free, private, no sign-up." h1="Sats / BTC / fiat converter" lead="Type in any box to convert between sats, bitcoin, dollars and euros. Or look up what bitcoin was worth on any date." faq={faq}>
+  <Fragment slot="tool">
+    <div class="row">
+      <div><label for="c-sats">Sats</label><input id="c-sats" inputmode="decimal" value="100000000" /></div>
+      <div><label for="c-btc">BTC</label><input id="c-btc" inputmode="decimal" value="1" /></div>
+      <div><label for="c-usd">USD</label><input id="c-usd" inputmode="decimal" /></div>
+      <div><label for="c-eur">EUR</label><input id="c-eur" inputmode="decimal" /></div>
+    </div>
+    <p id="c-status" class="small muted" aria-live="polite">Loading live price…</p>
+    <h3>Historical price</h3>
+    <form id="h-form" class="row">
+      <div><label for="h-date">Date</label><input id="h-date" type="date" min="2010-07-18" required /></div>
+      <div><label for="h-amt">Amount (BTC)</label><input id="h-amt" inputmode="decimal" value="1" /></div>
+      <div style="flex:0 1 auto"><button type="submit">Look up</button></div>
+    </form>
+    <div id="h-result" class="result" aria-live="polite"></div>
+  </Fragment>
+
+  <h2>Sats, bits and bitcoin</h2>
+  <p>One bitcoin is divisible into 100 million smaller units called <strong>satoshis</strong>, or <strong>sats</strong>. You never need to buy a whole bitcoin: most everyday amounts are easier to think about in sats. At a price of $80,000 per bitcoin, one dollar buys 1,250 sats, and one sat is worth eight hundredths of a cent.</p>
+  <p>Network fees are also counted in sats — usually in sats per virtual byte — so understanding sats helps you see what a transaction really costs. Lightning wallets and many apps show balances in sats by default for the same reason: the numbers are whole and easy to compare.</p>
+  <h3>Converting by hand</h3>
+  <ul>
+    <li><strong>BTC → sats:</strong> multiply by 100,000,000 (move the decimal point eight places right).</li>
+    <li><strong>Sats → BTC:</strong> divide by 100,000,000.</li>
+    <li><strong>BTC → dollars:</strong> multiply by the current price.</li>
+  </ul>
+  <h3>Historical prices</h3>
+  <p>The historical lookup shows the reference price for a given day, using data published by mempool.space. It is handy for answering questions like “what was my purchase worth?” or “what did that pizza cost?” For tax or accounting purposes, check the rules where you live, which may require a specific price source or time of day.</p>
+  <p>Remember that bitcoin’s price is volatile. A conversion is a snapshot; the value can move several percent in a day.</p>
+
+  <Fragment slot="example">
+    <p>You want to send someone €20 in bitcoin. If 1 BTC is €74,000, then €20 is 20 ÷ 74,000 = 0.00027027 BTC, which is <strong>27,027 sats</strong>. On 22 May 2010, Laszlo Hanyecz famously paid 10,000 BTC for two pizzas — try that date in the historical lookup (data may begin a little later).</p>
+  </Fragment>
+</Tool>
+<script>import '../../scripts/convert.ts';</script>

@@ -1,0 +1,39 @@
+---
+import Tool from '../../layouts/Tool.astro';
+const faq = [
+  { q: 'Is my bitcoin lost if the transaction is stuck?', a: 'No. An unconfirmed transaction either confirms eventually or is dropped by the network, in which case the coins remain spendable by the sender. Nobody can take the coins while it is pending.' },
+  { q: 'What is Replace-by-Fee (RBF)?', a: 'RBF lets the sender broadcast a new version of the same transaction with a higher fee. Miners prefer the higher fee, so the new version replaces the old one. Most modern wallets show it as “Bump fee” or “Speed up”.' },
+  { q: 'What is Child-Pays-for-Parent (CPFP)?', a: 'CPFP means spending an output of the stuck transaction in a new transaction with a high fee. Miners can only collect the child’s fee by also mining the parent, so they include both. The recipient can use it on an incoming payment, and the sender can use it on their change.' },
+  { q: 'My transaction does not signal RBF. Can it still be replaced?', a: 'Often, yes. Since Bitcoin Core 28 most nodes accept replacements regardless of the signal (“full-RBF”). However, many wallets only offer fee bumping for transactions that opted in, so CPFP may be easier in practice.' },
+  { q: 'Should I use a transaction accelerator?', a: 'Some mining pools offer paid acceleration. It can work, but be careful: only use well-known pools’ official services, and never send coins to someone who contacts you offering to speed up your transaction.' },
+  { q: 'How long until an unconfirmed transaction is dropped?', a: 'By default, Bitcoin Core nodes expire transactions after two weeks, or sooner if the mempool fills up and the fee is below the minimum. Wallets can rebroadcast, so “dropped” is not always final.' },
+];
+---
+<Tool slug="stuck-bitcoin-transaction" title="Stuck Bitcoin Transaction? Check why and how to speed it up (RBF, CPFP)" description="Paste a txid to see why your Bitcoin transaction is unconfirmed, how its fee compares to the market, and whether to wait, bump the fee with RBF, or use CPFP." h1="Stuck transaction helper" lead="Sent bitcoin and it hasn’t confirmed? Paste the transaction ID to see why, and get a clear recommendation: wait, bump the fee (RBF), or use child-pays-for-parent (CPFP)." faq={faq}>
+  <Fragment slot="tool">
+    <form id="stuck-form">
+      <label for="stuck-txid">Transaction ID (txid)</label>
+      <div class="row"><input id="stuck-txid" class="mono" placeholder="64 hex characters, e.g. f4184fc5…9e16" autocomplete="off" spellcheck="false" required />
+      <div style="flex:0 1 auto"><button type="submit">Check</button></div></div>
+    </form>
+    <p class="small muted">The txid is sent to mempool.space to look up the transaction. Mainnet only.</p>
+    <div id="stuck-result" class="result" aria-live="polite"></div>
+  </Fragment>
+
+  <h2>Why bitcoin transactions get stuck</h2>
+  <p>When you send bitcoin, your transaction is broadcast to the network and waits in each node’s <strong>mempool</strong> — a waiting room of unconfirmed transactions. Miners build blocks by choosing the transactions that pay the highest <strong>fee rate</strong> (satoshis per virtual byte). If many people are transacting and your fee rate is lower than what others are paying, your transaction keeps getting skipped. It is not broken; it is simply waiting in line.</p>
+  <p>This often happens when fees spike suddenly after you sent, or when a wallet chose a low fee to save money. The good news is that a stuck transaction is safe. It cannot be partially sent, and nobody can redirect it. It will either confirm when demand falls or eventually drop out of mempools, after which the coins can be spent again.</p>
+  <h3>Option 1: Wait</h3>
+  <p>If your fee is close to the current rates, waiting is usually the cheapest choice. Demand for block space tends to fall overnight and at weekends.</p>
+  <h3>Option 2: Replace-by-Fee (RBF)</h3>
+  <p>The sender can replace the transaction with a version that pays more. A replacement must pay a higher total fee than the original plus a little extra for the bandwidth it uses. Transactions “signal” RBF by setting a special field (the input sequence number) below a certain value; this tool checks that for you. Today most nodes accept replacements even without the signal, but your wallet has to support it.</p>
+  <h3>Option 3: Child-Pays-for-Parent (CPFP)</h3>
+  <p>Whoever controls one of the transaction’s outputs — the recipient, or the sender via their change — can spend that output right away in a new “child” transaction with a generous fee. Miners look at the combined fee rate of parent and child, so a high-fee child pulls the parent into a block. This tool estimates how big that child fee needs to be for a simple one-in, one-out child.</p>
+  <h3>What this tool cannot know</h3>
+  <p>It cannot see which outputs belong to you or what your wallet supports. Fee estimates change minute by minute, and some mempools may already have dropped a very-low-fee transaction even if mempool.space still shows it. Treat the numbers as a good starting point, not a promise.</p>
+
+  <Fragment slot="example">
+    <p>Say your transaction is 141 vB and paid 282 sats (2 sat/vB), but the market now wants 15 sat/vB for confirmation within half an hour. If it signals RBF, the sender can replace it with a fee of at least 15 × 141 = <strong>2,115 sats</strong>. If instead the recipient uses CPFP with a 110 vB child, the pair must pay 15 × (141 + 110) = 3,765 sats in total, so the child pays 3,765 − 282 = <strong>3,483 sats</strong> (about 31.7 sat/vB on its own).</p>
+  </Fragment>
+</Tool>
+<script>import '../../scripts/stuck.ts';</script>

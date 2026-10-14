@@ -1,0 +1,41 @@
+---
+import Tool from '../../layouts/Tool.astro';
+const faq = [
+  { q: 'Can a quantum computer steal bitcoin today?', a: 'No. No existing quantum computer comes anywhere near breaking the elliptic-curve cryptography Bitcoin uses. This tool is about understanding long-term exposure, not an imminent threat.' },
+  { q: 'Why does spending from an address reveal the public key?', a: 'Legacy and SegWit addresses commit only to a hash of the public key. To spend, you must show the actual public key and a signature, so it becomes visible on the blockchain forever.' },
+  { q: 'Why is Taproot always shown as exposed?', a: 'A Taproot address encodes a (tweaked) public key directly, rather than its hash. This was a deliberate design trade-off for efficiency and privacy. It means the key is visible as soon as the address is known.' },
+  { q: 'Is a never-spent bc1q address completely safe?', a: 'From the blockchain’s point of view, its public key is not revealed. But it can be revealed elsewhere, for example if you shared an extended public key (xpub) with a service or signed a message. And when you do spend, the key becomes visible while the transaction waits to confirm.' },
+  { q: 'What is BIP-360?', a: 'BIP-360 is a proposal to add a new output type designed to make Bitcoin more resistant to future quantum attacks. It is still under discussion; follow it if you care about long-term preparedness.' },
+  { q: 'Should I move my coins now?', a: 'There is no need to panic. Good practice is to avoid address reuse, and to move funds sitting on an address whose key is already exposed to a fresh address when it is convenient and fees are low.' },
+];
+---
+<Tool slug="bitcoin-quantum-exposure-checker" title="Bitcoin Quantum Exposure Checker — is your public key exposed?" description="Check whether a Bitcoin address has revealed its public key on-chain (spent from, reused, P2PK or Taproot), what that means for future quantum computers, and what to do — calmly explained." h1="Quantum exposure checker" lead="Future quantum computers could, in theory, derive private keys from public keys. Check whether an address’s public key is already visible on the blockchain — and what, if anything, to do about it." faq={faq}>
+  <Fragment slot="tool">
+    <form id="q-form">
+      <label for="q-input">Bitcoin address (or a raw public key)</label>
+      <div class="row"><input id="q-input" class="mono" placeholder="bc1q… / bc1p… / 1… / 3…" autocomplete="off" spellcheck="false" required />
+      <div style="flex:0 1 auto"><button type="submit">Check</button></div></div>
+    </form>
+    <p class="small muted">The address is sent to mempool.space to see whether it has ever been spent from. No risk scores — just facts.</p>
+    <div id="q-result" class="result" aria-live="polite"></div>
+  </Fragment>
+
+  <h2>Quantum computers and Bitcoin, calmly</h2>
+  <p>Bitcoin signatures rely on elliptic-curve cryptography. Today it is practically impossible to work backwards from a <strong>public key</strong> to the <strong>private key</strong> that controls the coins. A sufficiently large, fault-tolerant quantum computer running Shor’s algorithm could in principle do this. No such machine exists, and estimates of when one might range from many years to never — but because blockchain data is permanent, it is sensible to understand where public keys are already visible.</p>
+  <h3>When is a public key exposed?</h3>
+  <ul>
+    <li><strong>Pay-to-public-key (P2PK)</strong>, used in Bitcoin’s earliest years (including many early mined coins), puts the public key directly on-chain. Always exposed.</li>
+    <li><strong>Taproot (bc1p…)</strong> addresses contain a tweaked public key directly. Exposed as soon as the address is known.</li>
+    <li><strong>Legacy (1…) and native SegWit (bc1q…)</strong> addresses only contain a hash of the public key. The key is revealed the first time coins are spent from the address. If the address is then <em>reused</em> and still holds coins, those coins sit behind a public key everyone can see.</li>
+    <li><strong>Script addresses (3…, long bc1q…)</strong> reveal their script when spent. Whether that exposes public keys depends on the script — for wrapped SegWit and typical multisig, it does.</li>
+  </ul>
+  <h3>Short-range vs long-range exposure</h3>
+  <p>Every spend briefly reveals a public key while the transaction waits for confirmation. Attacking that window would require a very fast quantum computer. Coins that sit for years on an already-exposed key are a bigger theoretical target, which is why avoiding address reuse matters.</p>
+  <h3>What you can do</h3>
+  <p>Use a fresh address for every payment, which almost all modern wallets do automatically. If you hold funds on an address that has already been spent from, consider moving them to a fresh address when fees are low. Follow proposals such as BIP-360 for quantum-resistant outputs; if Bitcoin adopts one, moving to it will be the real long-term fix. And be wary of anyone using quantum fears to rush you into sending them coins.</p>
+
+  <Fragment slot="example">
+    <p>Imagine a bc1q address that received 0.5 BTC, then spent 0.2 BTC, with the remaining 0.3 BTC sent back to the same address as change. The first spend revealed its public key, so the tool reports it as <strong>exposed</strong> and notes 0.3 BTC remaining on a reused address. A different bc1q address that has only ever received coins shows as <strong>not revealed on-chain</strong>. Any bc1p Taproot address shows as exposed, because its key is part of the address.</p>
+  </Fragment>
+</Tool>
+<script>import '../../scripts/quantum.ts';</script>
