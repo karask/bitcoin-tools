@@ -103,3 +103,25 @@ QR image rendering and scanning; picker interaction and the ?network persistence
 
 ### Addendum (19:21 Athens)
 Parent f79ebf7e… and replacement child 14fa6ba3… were **both confirmed in Signet block 326343 (19:19:37 Athens time)**. The first child 689ea9b1… was replaced and now returns 404, so the tool shows its not-found note, which mentions RBF replacement ✔. On the parent, the stuck tool reports advice `confirmed`, 1 confirmation ✔. The end-to-end flow worked: low fee → stuck → correct advice → CPFP → bump to a higher target (needed because of B7) → confirmed.
+
+---
+# Retest 2, 2026-10-14 19:27–19:55 (Athens), after a83c840
+Unit tests: 150/150 pass. The regression harness (`.qa/live.test.ts`) passes: 27 address cases, quantum verdicts unchanged (B1 fix holds), mainnet stuck checks run.
+
+| Item | Check | Result |
+|---|---|---|
+| B6 | Source `stuck.ts:48` is now a template literal. Deployed bundle hoisted.DaeKmKel.js has `` `<p>Nothing has been received … on ${…}`` with no literal `NET_NAME[currentNet` text | PASS (visual check of the rendered text still needs a browser) |
+| Non-numeric amount | `abc`, `0x10`, `1e-3`, empty → "Amount must be a number (for example 0.0015)" | PASS. Minor: `1.2.3` still says "no scientific notation" |
+| B7 logic | Deployed tx.L3obYXXF.js calls mempool-blocks. bumpTarget: next block not full → max(minimumFee, feeRange[0]+0.1) | Implemented as described |
+| B7 end-to-end | see below | **FAIL (advice "wait" was wrong)**. The bump itself worked |
+
+## B7 Signet run
+- Low-fee tx **2c4421910d3e122d142360593a524e611c5ad4bed8895d895f4eb45ba6ba5b95**: spends leftover 14fa6ba3…:0 (29,245 sats), 141 vB, fee 15 = **0.106 sat/vB**, RBF, 10,000 to the recipient + 19,230 change. Accepted.
+- mempool-blocks: a single projected block of 183,579 vB (not full), feeRange[0] = 0.107 (my tx). fees/recommended: all tiers 1. Tool: targetRate **1.0** (`projected`, so max(minimumFee 1, 0.107+0.1)), position `below-minimum`, but **advice `wait`**, because blocksAhead() returns 0 for any tx when the next block isn't full. RBF fee 156, CPFP child 236. The fee figures match the formula.
+- Reality: block **326345 (19:48:22, 442,902 vB, not full, 24 txs below 1 sat/vB, minimum 0.1)** did **not** include it, 25 minutes after broadcast. The earlier 0.106 sat/vB tx f79ebf7e… was also skipped by 326341–326342. Likely cause: sub-1 sat/vB txs reach mempool.space but not the signet signer's node (relay/propagation varies), so mempool.space's projection overstates the chance.
+- Applied the tool's suggested bump with **one** CPFP child, **f7498ff39e9cd4b48aa198acee7f80697e9864777767a93d95293a94a323b306** (spends change vout 1, fee 236, 110 vB as predicted). Package effective rate 1.006. **Both were mined in the next block, 326346 (19:52:52 Athens), about 3.5 minutes after the bump.** Bump target: PASS.
+
+## New / remaining
+- **B8 (Medium; B7 is only partly fixed).** "Wait" is shown for a tx below the network's minimum fee (`position: below-minimum`) whenever the next projected block isn't full. That contradicts the page's own ETA text ("below what most queues are requiring… may be dropped"), and in practice the tx was not mined. Repro: Signet, any tx at ~0.1 sat/vB while the projected block is under 950k vB → advice `wait`. Fix: never return `wait` when `rate < fees.minimumFee` (or below 1 sat/vB, the default min relay of most nodes). Show RBF/CPFP to the target instead, and optionally note that very low-fee txs may not have reached all miners.
+- Note: FULL_BLOCK_VB = 950k assumes mainnet-style full blocks. On Signet, blocks of 100k–460k vB are normal, so the "not full" branch is almost always taken there.
+- Minor: `amount=1.2.3` still says "no scientific notation".

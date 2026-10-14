@@ -100,7 +100,14 @@ const up1 = (x: number) => Math.ceil(x * 10 - 1e-9) / 10;
  * to the half-hour estimate plus a small margin (10%, at least 0.2 sat/vB), because a flat estimate (e.g. all 1 sat/vB)
  * can leave a package behind a large backlog paying just above it.
  */
+/** Lowest fee rate miners/relays reliably accept: mempool.space minimumFee, default 1 sat/vB. */
+export const minFeeRate = (fees: RecommendedFees) => (isFinite(fees.minimumFee) && fees.minimumFee > 0 ? fees.minimumFee : 1);
+
 export function bumpTarget(fees: RecommendedFees, blocks?: MempoolBlock[] | null): { rate: number; source: 'projected' | 'estimate' } {
+  const t = rawBumpTarget(fees, blocks);
+  return { ...t, rate: Math.max(t.rate, minFeeRate(fees)) };
+}
+function rawBumpTarget(fees: RecommendedFees, blocks?: MempoolBlock[] | null): { rate: number; source: 'projected' | 'estimate' } {
   const b = Array.isArray(blocks) ? blocks[0] : undefined;
   const valid = b && isFinite(b.blockVSize) && Array.isArray(b.feeRange) && b.feeRange.length > 0 && b.feeRange.every((x) => isFinite(x));
   if (valid) {
@@ -139,7 +146,8 @@ export function analyzeStuck(tx: Tx, fees: RecommendedFees, opts: { effectiveRat
   const hasBlocks = Array.isArray(opts.blocks) && opts.blocks.length > 0;
   // Within ~3 projected blocks (about 30 min) is fine to wait; without projections, use the hour estimate.
   const okToWait = hasBlocks ? blocksAhead(rate, opts.blocks!) <= 2 : rate >= fees.hourFee;
-  if (okToWait) return { ...base, advice: 'wait', rbfFee, cpfpChildFee: childFee };
+  // Below the minimum relay/mining fee a tx may never reach miners (seen on Signet), whatever the projection says.
+  if (okToWait && rate >= minFeeRate(fees)) return { ...base, advice: 'wait', rbfFee, cpfpChildFee: childFee };
   const canCpfp = spendableOutputs.length > 0;
   // Under full-RBF (Bitcoin Core 28+ default) any unconfirmed tx can be replaced by whoever controls its inputs,
   // but `rbf` tells us whether it opted in, which matters for older nodes/wallets.

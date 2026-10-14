@@ -34,8 +34,8 @@ export function formatBip21Amount(amount: number | string): string {
   } else {
     s = amount.trim();
     if (/^-/.test(s)) throw new Error('Amount must be positive');
-    if (!/^[\d.eE+]+$/.test(s) || !/\d/.test(s)) throw new Error('Amount must be a number (for example 0.0015)');
-    if (!/^\d+(\.\d+)?$/.test(s)) throw new Error('Amount must be a plain decimal (no scientific notation)');
+    if (/^\d+(\.\d+)?[eE][+-]?\d+$/.test(s)) throw new Error('Amount must be a plain decimal (no scientific notation)');
+    if (!/^\d+(\.\d+)?$/.test(s)) throw new Error('Amount must be a number (for example 0.0015)');
     const [a, b = ''] = s.split('.');
     if (b.length > 8) throw new Error('Amount has more than 8 decimal places');
     s = b ? `${a}.${b}` : a;

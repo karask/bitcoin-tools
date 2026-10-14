@@ -98,6 +98,7 @@ async function showTx(txid: string, quiet: boolean) {
         if (a.advice === 'cpfp' || a.advice === 'rbf-or-cpfp') {
           opts.push(`<p><strong>If you are the receiver</strong> (or own the change), you can speed it up yourself with CPFP: roughly <strong>${fmtSats(a.cpfpChildFee!)}</strong> for a simple ~${CPFP_CHILD_VSIZE} vB child. <a href="${withNet(`?cpfp=${tx.txid}#cpfp`)}">Build the CPFP transaction below →</a></p>`);
         }
+        if (a.position === 'below-minimum') opts.push(`<p class="small muted">Transactions paying less than the network minimum (${fmtRate(fees.minimumFee || 1)}) often never reach miners, even when mempool.space shows room in the next block — so waiting is not a safe plan here.</p>`);
         if (a.advice === 'cpfp') opts.push(`<p class="small muted">It does not signal RBF. Most nodes now run with “full-RBF” (Bitcoin Core 28+ default), so a sender’s replacement would often still propagate — but many wallets will not offer to bump a non-signalling transaction.</p>`);
         if (a.advice === 'wait-or-accelerate') opts.push(`<h3>Your options</h3><p>It does not signal RBF and has no unspent outputs to use for CPFP, so the usual choices are to <strong>wait</strong>, or, as a last resort, a paid accelerator such as <a href="https://mempool.space/accelerator">mempool.space Accelerator</a> (paid, not guaranteed; Binance’s accelerator closes with Binance Pool on 10 Nov 2026). Under full-RBF, the sender may still be able to replace it with wallet software that supports it.</p>`);
         html += opts.join('');

@@ -64,3 +64,10 @@ describe('non-numeric amount', () => {
   it('empty-ish junk says number', () => { expect(() => formatBip21Amount('1,5')).toThrow(/must be a number/); });
   it('"1e3" still gets the scientific-notation message', () => { expect(() => formatBip21Amount('1e3')).toThrow(/scientific/); });
 });
+
+describe('malformed numbers (Retest 2)', () => {
+  for (const s of ['1.2.3', '1..2', '.5', '1.', '1e', 'e3', '1.2e', '--1e3', '1 000'])
+    it(`"${s}" says must be a number`, () => { expect(() => formatBip21Amount(s)).toThrow(/must be a number|must be positive/); });
+  for (const s of ['1e3', '1.5E-3', '2e+2'])
+    it(`"${s}" says no scientific notation`, () => { expect(() => formatBip21Amount(s)).toThrow(/scientific/); });
+});

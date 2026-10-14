@@ -112,3 +112,24 @@ describe('bump target from projected blocks (B7)', () => {
     expect(analyzeStuck(mkTx({ fee: 141 * 3 }), flat, { blocks: [full(2, 1.05)] }).advice).toBe('wait');
   });
 });
+
+describe('below minimum fee never says wait (B8)', () => {
+  const flat = { fastestFee: 1, halfHourFee: 1, hourFee: 1, economyFee: 1, minimumFee: 1 };
+  const notFull: MempoolBlock[] = [{ blockVSize: 183_579, medianFee: 0, feeRange: [0.107, 1, 3] }];
+  it('Signet repro: 0.106 sat/vB, next block not full → bump, target ≥ 1', () => {
+    const a = analyzeStuck(mkTx({ fee: 15, weight: 564, vin: [vin(0xfffffffd)] }), flat, { blocks: notFull });
+    expect(a.position).toBe('below-minimum'); expect(a.advice).not.toBe('wait');
+    expect(a.targetRate).toBeGreaterThanOrEqual(1); expect(a.rbfFee).toBe(156); expect(a.cpfpChildFee).toBe(236);
+  });
+  it('also without projections', () => {
+    expect(analyzeStuck(mkTx({ fee: 15, vin: [vin(0xfffffffd)] }), { ...flat, hourFee: 0.1 }).advice).not.toBe('wait');
+  });
+  it('target respects a higher minimumFee; defaults to 1 if missing', () => {
+    expect(bumpTarget({ ...flat, minimumFee: 3 }, notFull).rate).toBe(3);
+    expect(bumpTarget({ ...flat, minimumFee: 0 }, notFull).rate).toBe(1);
+    expect(bumpTarget({ ...flat, halfHourFee: 0.5, minimumFee: NaN as unknown as number }, null).rate).toBe(1);
+  });
+  it('at the minimum in a non-full block still waits', () => {
+    expect(analyzeStuck(mkTx({ fee: 141 }), flat, { blocks: notFull }).advice).toBe('wait');
+  });
+});
