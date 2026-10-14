@@ -352,7 +352,7 @@ tr:last-child td { border-bottom: 0; }
 
 /* ============ footer ============ */
 footer.site { border-top: 1px solid var(--border); }
-.foot { max-width: 1320px; margin: 0 auto; padding: 22px 24px 26px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; font-size: .9rem; color: var(--muted); }
+.foot { max-width: 1320px; margin: 0 auto; padding: 22px 24px 26px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; font-size: .85rem; color: var(--muted); }
 .foot nav { display: flex; gap: 20px; }
 footer.site a { color: var(--muted); text-decoration: none; }
 footer.site a:hover { color: var(--accent-ink); }
