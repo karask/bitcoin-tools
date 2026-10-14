@@ -17,7 +17,10 @@ const faq = [
       <div><label for="c-eur">EUR</label><input id="c-eur" inputmode="decimal" /></div>
     </div>
     <p id="c-status" class="small muted" aria-live="polite">Loading live price…</p>
+  </Fragment>
+  <Fragment slot="tool2">
     <h3>Historical price</h3>
+    <p class="small muted">What was bitcoin worth on a given day, and what is that amount worth today?</p>
     <form id="h-form" class="row">
       <div><label for="h-date">Date</label><input id="h-date" type="date" min="2010-07-18" required /></div>
       <div><label for="h-amt">Amount (BTC)</label><input id="h-amt" inputmode="decimal" value="1" /></div>

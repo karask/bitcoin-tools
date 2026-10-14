@@ -32,6 +32,7 @@ const cat = categoryOf(tool.category);
   </header>
 
   <section class={`panel cat-${tool.category}`} aria-label="Tool"><slot name="tool" /></section>
+  {Astro.slots.has('tool2') && <section class={`panel cat-${tool.category}`} aria-label="Tool, continued"><slot name="tool2" /></section>}
 
   <article class="prose">
     <slot />

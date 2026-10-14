@@ -48,7 +48,14 @@ onSubmit(hForm, async () => {
     if (!p || (!p.USD && !p.EUR)) { hOut.innerHTML = '<p>No price data for that date. Bitcoin had no meaningful market price before mid-2010.</p>'; return; }
     const btc = clean(hAmt.value) || 1;
     const d = new Date(p.time * 1000).toISOString().slice(0, 10);
-    const now = price.USD ? ` Today the same amount is worth about <strong>$${(btc * price.USD).toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong>.` : '';
-    hOut.innerHTML = `<p>On <strong>${d}</strong> (UTC), 1 BTC was about <strong>$${p.USD.toLocaleString()}</strong> / <strong>€${p.EUR.toLocaleString()}</strong>. So ${btc} BTC was worth about <strong>$${(btc * p.USD).toLocaleString(undefined, { maximumFractionDigits: 2 })}</strong> / €${(btc * p.EUR).toLocaleString(undefined, { maximumFractionDigits: 2 })}.${now}</p><p class="small muted">Daily reference price from mempool.space; actual exchange prices varied during the day and between exchanges.</p>`;
+    const money = (v: number, cur: 'USD' | 'EUR') => v ? new Intl.NumberFormat('en-US', { style: 'currency', currency: cur, maximumFractionDigits: 2 }).format(v) : '—';
+    const row = (label: string, usd: number, eur: number, strong = false) =>
+      `<tr${strong ? ' class="hl"' : ''}><td>${label}</td><td class="num">${money(usd, 'USD')}</td><td class="num">${money(eur, 'EUR')}</td></tr>`;
+    const amt = `${btc.toLocaleString('en-US', { maximumFractionDigits: 8 })} BTC`;
+    hOut.innerHTML = `<table class="price-table"><thead><tr><th></th><th class="num">USD</th><th class="num">EUR</th></tr></thead><tbody>
+      ${row(`1 BTC on ${d}`, p.USD, p.EUR)}
+      ${btc !== 1 ? row(`${amt} on ${d}`, btc * p.USD, btc * p.EUR, true) : ''}
+      ${price.USD ? row(`${amt} today`, btc * price.USD, btc * price.EUR, true) : ''}
+    </tbody></table><p class="small muted">Dates are UTC. Daily reference price from mempool.space; actual exchange prices varied during the day and between exchanges.</p>`;
   } catch (e) { showError(hOut, e); }
 });
