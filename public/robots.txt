@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://karask.github.io/bitcoin-tools/sitemap-index.xml
+Sitemap: https://kkarasavvas.com/bitcoin-tools/sitemap-index.xml

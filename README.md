@@ -2,16 +2,16 @@
 
 Simple, private Bitcoin tools that explain every result in plain English.
 
-**Live:** https://karask.github.io/bitcoin-tools/
+**Live:** https://kkarasavvas.com/bitcoin-tools/ (karask.github.io/bitcoin-tools redirects here)
 
 | Tool | What it does |
 |---|---|
-| [Fee checker](https://karask.github.io/bitcoin-tools/tools/bitcoin-fee-checker/) | Fee rates for ~10 min / ~1 h / ~1 day, total cost in sats, USD, EUR |
-| [Stuck transaction helper](https://karask.github.io/bitcoin-tools/tools/stuck-bitcoin-transaction/) | Why a tx is unconfirmed; wait / RBF / CPFP with target fees |
-| [Address checker](https://karask.github.io/bitcoin-tools/tools/bitcoin-address-checker/) | Local validation: network, type, checksum/typo, bech32 vs bech32m |
-| [Transaction explainer](https://karask.github.io/bitcoin-tools/tools/bitcoin-transaction-explainer/) | Plain-English summary of any txid |
-| [Converter](https://karask.github.io/bitcoin-tools/tools/sats-btc-converter/) | sats / BTC / USD / EUR, live and historical |
-| [Quantum exposure checker](https://karask.github.io/bitcoin-tools/tools/bitcoin-quantum-exposure-checker/) | Whether an address's public key is revealed on-chain |
+| [Fee checker](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-fee-checker/) | Fee rates for ~10 min / ~1 h / ~1 day, total cost in sats, USD, EUR |
+| [Stuck transaction helper](https://kkarasavvas.com/bitcoin-tools/tools/stuck-bitcoin-transaction/) | Why a tx is unconfirmed; wait / RBF / CPFP with target fees |
+| [Address checker](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-address-checker/) | Local validation: network, type, checksum/typo, bech32 vs bech32m |
+| [Transaction explainer](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-transaction-explainer/) | Plain-English summary of any txid |
+| [Converter](https://kkarasavvas.com/bitcoin-tools/tools/sats-btc-converter/) | sats / BTC / USD / EUR, live and historical |
+| [Quantum exposure checker](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-quantum-exposure-checker/) | Whether an address's public key is revealed on-chain |
 
 ## Privacy stance
 
