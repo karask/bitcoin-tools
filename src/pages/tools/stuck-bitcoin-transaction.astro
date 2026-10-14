@@ -10,6 +10,7 @@ const faq = [
   { q: 'Is my bitcoin lost if the transaction is stuck?', a: 'No. An unconfirmed transaction either confirms eventually or is dropped, in which case the coins remain spendable by the sender. Nobody can take them while it is pending.' },
   { q: 'Why does “not found” not mean failed?', a: 'Bitcoin has no failure receipt. An ID that is not on mainnet right now may have a typo, belong to another network, have been replaced by a fee bump, have been dropped, or not have propagated yet. This tool never claims certainty.' },
   { q: 'How many confirmations do I need?', a: 'One confirmation already makes reversal very unlikely for everyday amounts. Many services wait for 3 to 6 for larger payments.' },
+  { q: 'Why did the builder refuse to make a PSBT?', a: 'Besides unsafe amounts (fee larger than the output, dust, or an unknown script type), it refuses whenever it cannot load the stuck transaction’s unconfirmed ancestors from mempool.space. Without them the fee could be too low and your payment would stay stuck. Wait a minute and press Retry.' },
   { q: 'Does auto-refresh notify me?', a: 'No. It only updates this page every 30 seconds while it is open and visible. No notifications, no backend.' },
 ];
 ---
@@ -55,6 +56,7 @@ const faq = [
     <li>If the fee would be larger than your output, or leave less than the dust limit, the builder refuses.</li>
     <li>If the fee is more than 20% of your output, it warns you; above 50%, it warns loudly. Waiting may be better.</li>
     <li>If the stuck transaction already pays the target, it tells you a child is unnecessary.</li>
+    <li>If information about related unconfirmed transactions can’t be loaded from mempool.space, it refuses to build a PSBT rather than guess the fee — just retry a minute later.</li>
   </ul>
   <h3>A note on Binance’s accelerator</h3>
   <p>Binance’s Transaction Accelerator is being discontinued as part of the closure of Binance Pool on <strong>10 November 2026</strong> (07:00 UTC), according to Binance’s announcement (<a href="https://coinmarketcap.com/academy/article/binance-pool-cloud-mining-shutdown-nov-10">reported by CoinMarketCap</a>). CPFP and RBF do not depend on any accelerator.</p>

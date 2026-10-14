@@ -1,7 +1,7 @@
 import { getTx, getOutspends, getCpfp, getFees, getTxHex, getTipHeight, isTxid } from '../lib/api';
 import { decodeAddress } from '../lib/address';
 import { vsizeFromWeight } from '../lib/tx';
-import { cpfpPackage, childVsize, checkSafety, buildChildPsbt, inputKindFromType, outKindFromAddressType, type InputKind } from '../lib/cpfp';
+import { loadAncestors, cpfpPackage, childVsize, checkSafety, buildChildPsbt, inputKindFromType, outKindFromAddressType, type InputKind } from '../lib/cpfp';
 import { qrSvg } from '../lib/qr';
 import { fmtSats, fmtRate, esc } from '../lib/format';
 import { $, loading, showError, verdict, tech, onSubmit } from './ui';
@@ -14,6 +14,7 @@ const out = $('#cpfp-result');
 let parent: Tx | null = null;
 let fees: RecommendedFees | null = null;
 let ancestors: { fee: number; vsize: number }[] = [];
+let ancestorsOk = false;
 let tip = 0;
 
 const TYPE_NAME: Record<string, string> = { v0_p2wpkh: 'SegWit (bc1q…)', v1_p2tr: 'Taproot (bc1p…)', p2pkh: 'Legacy (1…)', p2sh: 'P2SH (3…)', v0_p2wsh: 'SegWit script (bc1q…, long)', op_return: 'OP_RETURN data', p2pk: 'P2PK', multisig: 'bare multisig' };
@@ -26,10 +27,16 @@ onSubmit(loadForm, async () => {
   if (!isTxid(txid)) { showError(step2, new Error('Paste the stuck transaction’s ID: 64 characters of 0–9 and a–f.')); return; }
   loading(step2, 'Loading the stuck transaction from mempool.space…');
   try {
-    const [tx, spends, f, cp, h] = await Promise.all([getTx(txid), getOutspends(txid), getFees(), getCpfp(txid).catch(() => undefined), getTipHeight().catch(() => 0)]);
+    const [tx, spends, f, anc, h] = await Promise.all([getTx(txid), getOutspends(txid), getFees(), loadAncestors(() => getCpfp(txid)), getTipHeight().catch(() => 0)]);
     if (tx.status.confirmed) { step2.innerHTML = verdict('ok', 'This transaction is already confirmed', '<p>Nothing to fix — no CPFP needed.</p>'); return; }
-    parent = tx; fees = f; tip = h;
-    ancestors = (cp?.ancestors ?? []).map((a) => ({ fee: a.fee, vsize: Math.ceil(a.weight / 4) }));
+    parent = null; fees = f; tip = h;
+    if (!anc.ok) {
+      ancestorsOk = false;
+      step2.innerHTML = verdict('warn', 'Couldn’t load related transactions — no PSBT built', '<p>We couldn’t load information about related unconfirmed transactions from mempool.space, so we can’t calculate a safe fee. Building anyway could under-pay and leave your payment stuck. Please try again in a minute.</p><p><button type="button" id="cpfp-retry">Retry</button></p>');
+      $('#cpfp-retry').addEventListener('click', () => loadForm.requestSubmit());
+      return;
+    }
+    parent = tx; ancestorsOk = true; ancestors = anc.ancestors;
     const opts = tx.vout.map((o, i) => ({ o, i })).filter(({ o, i }) => o.scriptpubkey_type !== 'op_return' && !spends[i]?.spent);
     if (!opts.length) { step2.innerHTML = verdict('warn', 'No unspent outputs to build on', '<p>Every output of this transaction is already spent (or is data). CPFP is not possible from here — if a child already exists, check it with the status tool above.</p>'); return; }
     step2.innerHTML = `<form id="cpfp-build">
@@ -54,7 +61,7 @@ onSubmit(loadForm, async () => {
 });
 
 async function build() {
-  if (!parent || !fees) return;
+  if (!parent || !fees || !ancestorsOk) { out.innerHTML = verdict('warn', 'No PSBT built', '<p>Related-transaction data is missing, so a safe fee can’t be calculated. Reload the stuck transaction and try again.</p>'); return; }
   const vout = +$<HTMLSelectElement>('#cpfp-out').value;
   const o = parent.vout[vout];
   const kind: InputKind | null = inputKindFromType(o.scriptpubkey_type, $<HTMLSelectElement>('#cpfp-p2sh-sel').value === 'yes');

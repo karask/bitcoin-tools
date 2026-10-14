@@ -24,7 +24,7 @@ export interface Prices { time: number; USD: number; EUR: number; }
 export const getFees = () => get<import('./tx').RecommendedFees>('/v1/fees/recommended');
 export const getTx = (txid: string) => get<import('./tx').Tx>(`/tx/${txid}`);
 export const getOutspends = (txid: string) => get<{ spent: boolean }[]>(`/tx/${txid}/outspends`);
-export const getCpfp = (txid: string) => get<{ effectiveFeePerVsize?: number; ancestors?: { txid: string; fee: number; weight: number }[] }>(`/v1/cpfp/${txid}`);
+export const getCpfp = (txid: string) => get<unknown>(`/v1/cpfp/${txid}`);
 export const getAddress = (addr: string) => get<import('./quantum').AddressStats & { address: string }>(`/address/${addr}`);
 export const getAddressTxs = (addr: string) => get<import('./tx').Tx[]>(`/address/${addr}/txs`);
 /** Like getTx but returns null on 404 (payment status lookups). */

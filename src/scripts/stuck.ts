@@ -76,7 +76,8 @@ async function showTx(txid: string, quiet: boolean) {
       tx.status.confirmed ? Promise.resolve(undefined) : getCpfp(txid).catch(() => undefined),
     ]);
     const ownRate = tx.fee / (tx.weight / 4);
-    const eff = cpfp?.effectiveFeePerVsize;
+    const effRaw = (cpfp as { effectiveFeePerVsize?: unknown } | undefined)?.effectiveFeePerVsize;
+    const eff = typeof effRaw === 'number' && isFinite(effRaw) ? effRaw : undefined;
     const a = analyzeStuck(tx, fees, { effectiveRate: eff, outspends });
     const vsize = vsizeFromWeight(tx.weight);
     let html = '';

@@ -88,3 +88,27 @@ export function buildChildPsbt(c: ChildPsbtInput): { base64: string; bytes: Uint
   const bytes = tx.toPSBT();
   return { base64: base64.encode(bytes), bytes };
 }
+
+export type AncestorLoad = { ok: true; ancestors: Ancestor[] } | { ok: false };
+/**
+ * Validate a mempool.space /api/v1/cpfp/:txid response. A missing, failed or malformed
+ * response is NOT treated as "no ancestors" — the caller must refuse to build, since
+ * ignoring unconfirmed ancestors would under-pay the package.
+ */
+export function parseAncestors(resp: unknown): AncestorLoad {
+  if (!resp || typeof resp !== 'object') return { ok: false };
+  const a = (resp as { ancestors?: unknown }).ancestors;
+  if (!Array.isArray(a)) return { ok: false };
+  const out: Ancestor[] = [];
+  for (const x of a) {
+    const fee = (x as { fee?: unknown })?.fee, weight = (x as { weight?: unknown })?.weight;
+    if (typeof fee !== 'number' || typeof weight !== 'number' || !isFinite(fee) || !isFinite(weight) || fee < 0 || weight <= 0) return { ok: false };
+    out.push({ fee, vsize: Math.ceil(weight / 4) });
+  }
+  return { ok: true, ancestors: out };
+}
+
+/** Fetch + validate ancestors; any network error or bad shape yields { ok: false }. */
+export async function loadAncestors(fetcher: () => Promise<unknown>): Promise<AncestorLoad> {
+  try { return parseAncestors(await fetcher()); } catch { return { ok: false }; }
+}

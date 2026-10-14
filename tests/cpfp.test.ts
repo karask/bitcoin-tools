@@ -85,3 +85,29 @@ describe('PSBT round-trip', () => {
     expect(t.getOutput(0).amount).toBe(68000n);
   });
 });
+
+import { parseAncestors, loadAncestors } from '../src/lib/cpfp';
+describe('ancestor loading (refuse on failure)', () => {
+  it('network failure -> refuses', async () => {
+    expect((await loadAncestors(() => Promise.reject(new Error('timeout')))).ok).toBe(false);
+  });
+  it('malformed -> refuses', () => {
+    expect(parseAncestors(null).ok).toBe(false);
+    expect(parseAncestors({}).ok).toBe(false);
+    expect(parseAncestors({ ancestors: 'x' }).ok).toBe(false);
+    expect(parseAncestors({ ancestors: [{ fee: 'a', weight: 400 }] }).ok).toBe(false);
+    expect(parseAncestors({ ancestors: [{ fee: 10 }] }).ok).toBe(false);
+  });
+  it('empty ancestors -> builds normally', async () => {
+    const r = await loadAncestors(async () => ({ ancestors: [], effectiveFeePerVsize: 2 }));
+    expect(r).toEqual({ ok: true, ancestors: [] });
+    const pkg = cpfpPackage({ parentFee: 200, parentVsize: 200, ancestors: r.ok ? r.ancestors : [], childVsize: 110, targetRate: 10 });
+    expect(pkg.childFee).toBe(2900);
+  });
+  it('ancestors present -> included in package', async () => {
+    const r = await loadAncestors(async () => ({ ancestors: [{ txid: 'x', fee: 300, weight: 600 }] }));
+    expect(r.ok && r.ancestors).toEqual([{ fee: 300, vsize: 150 }]);
+    const pkg = cpfpPackage({ parentFee: 200, parentVsize: 200, ancestors: r.ok ? r.ancestors : [], childVsize: 110, targetRate: 10 });
+    expect(pkg.childFee).toBe(4100); expect(pkg.packageVsize).toBe(460);
+  });
+});

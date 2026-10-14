@@ -1,0 +1,17 @@
+import { test } from 'vitest';
+import { decodeAddress } from '../src/lib/address';
+import { classifyExposure } from '../src/lib/quantum';
+import { analyzeStuck } from '../src/lib/tx';
+import { trackTx } from '../src/lib/tracker';
+const A='https://mempool.space/api';
+const j=async(u:string)=>{const r=await fetch(u);return r.ok?r.json():{status:r.status}};
+const addrs=['1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa','12cbQLTFMXRnSzktFkuoG3eHoMeFtpTu3S','1HLoD9E4SDFFPDiYfNYnkBLQ85Y51J3Zb1','3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy','bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq','bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3','bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297','BC1QW508D6QEJXTDG4C3T5W76WT5RM6Q40ZXFAJ9','tb1qw508d6qejxtdg4c3t5w76wt5rm6q40zxfaj9','tb1pqqqqp399et2xygdj5xreqhjjvcmzhxw4aywxecjdzew6hylgvsesf3hn0c','mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn','2MzQwSSnBHWHqSAqtTVQ6v47XtaisrJa1Vc','bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdx','1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNb','bc1zw508d6qejxtdg4c3t5w76wt5rm6q40zxfaj9','bc1pw508d6qejxtdg4c3t5w76wt5rm6q40zxfaj9mjjwhz','bc1qw508d6qejxtdg4c3t5w76wt5rm6q40zxfaj9xxxxxx','LVg2kJoFNg45Nbpy53h7Fe1wKyeXVRhMH9','','  1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa  ','bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=1','bc1Qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq','bc1pfeessrawgf','hello world','0'.repeat(200),'bcrt1qw508d6qejxtdg4c3t5w76wt5rm6q40zxfaj9','1'];
+test('addr',async()=>{for(const a of addrs){const r=decodeAddress(a);const g=a.trim()?await j(`${A}/v1/validate-address/${encodeURIComponent(a.trim())}`):{};console.log(JSON.stringify({a:a.slice(0,50),ours:r.valid?`${r.network} ${r.type}`:'INVALID: '+r.error.slice(0,60),mempool:g.isvalid??g.status, mpType: g.isvalid? (g.iswitness?'w'+g.witness_version:g.isscript?'script':'pkh'):g.error}))}},120000);
+const q=['1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa','12cbQLTFMXRnSzktFkuoG3eHoMeFtpTu3S','1HLoD9E4SDFFPDiYfNYnkBLQ85Y51J3Zb1','3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy','bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3','bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297','bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq'];
+test('quantum',async()=>{for(const a of q){const d:any=decodeAddress(a);const s=await j(`${A}/address/${a}`);const r=classifyExposure(d.type,s);console.log(a,d.type,r.exposure,'bal',r.balance,'spent',s.chain_stats.spent_txo_count)}},120000);
+test('stuck',async()=>{const fees=await j(`${A}/v1/fees/recommended`);console.log('fees',JSON.stringify(fees));const ids:string[]=(await j(`${A}/mempool/recent`)).map((x:any)=>x.txid);
+ const blk=await j(`${A}/blocks/tip/hash`).catch(()=>null);
+ let n=0;for(const id of ids){const tx=await j(`${A}/tx/${id}`);const rate=tx.fee/(tx.weight/4);const os=await j(`${A}/tx/${id}/outspends`);const an=analyzeStuck(tx,fees,{outspends:os});console.log(id,'rate',rate.toFixed(2),'rbf',an.rbf,'adv',an.advice,'pos',an.position,'rbfFee',an.rbfFee,'cpfp',an.cpfpChildFee,'vsize',an.vsize,'fee',tx.fee);if(++n>=8)break}
+ const tip=Number(await (await fetch(A+'/blocks/tip/height')).text());const c=await j(`${A}/tx/4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b`);console.log('genesis-cb', JSON.stringify(trackTx(c.txid?c:null,tip,fees)).slice(0,200));
+ const f=await j(`${A}/tx/f4184fc596403b9d638783cf57adfe4c75c605f6356fbc91338530e9831e9e16`);console.log('first p2p', JSON.stringify(trackTx(f,tip,fees)).slice(0,160), 'analyze', analyzeStuck(f,fees).advice);
+},180000);
