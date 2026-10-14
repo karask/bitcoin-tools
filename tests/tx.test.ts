@@ -75,3 +75,40 @@ describe('per-type dust (B2)', () => {
     expect(analyzeStuck(tx, fees).spendableOutputs).toEqual([2, 3, 4]);
   });
 });
+
+import { bumpTarget, blocksAhead, type MempoolBlock } from '../src/lib/tx';
+describe('bump target from projected blocks (B7)', () => {
+  const flat = { fastestFee: 1, halfHourFee: 1, hourFee: 1, economyFee: 1, minimumFee: 1 };
+  const full = (median: number, min: number): MempoolBlock => ({ blockVSize: 997_000, medianFee: median, feeRange: [min, median, median * 2] });
+  it('flat 1 sat/vB estimates + full next block → above its median, not 1', () => {
+    const t = bumpTarget(flat, [full(1.99, 1.01), full(1.0, 1.0)]);
+    expect(t.source).toBe('projected'); expect(t.rate).toBeCloseTo(2.1);
+  });
+  it('never below the half-hour estimate', () => {
+    expect(bumpTarget({ ...flat, halfHourFee: 15 }, [full(3, 2)]).rate).toBe(15);
+  });
+  it('next block not full → just above its lowest fee', () => {
+    expect(bumpTarget(flat, [{ blockVSize: 250_000, medianFee: 0, feeRange: [0.5, 1, 2] }])).toEqual({ rate: 1, source: 'projected' });
+  });
+  it('median 0 (bad data) uses the middle of the fee range', () => {
+    expect(bumpTarget(flat, [{ blockVSize: 999_000, medianFee: 0, feeRange: [1, 1.004, 3] }]).rate).toBeCloseTo(1.2);
+  });
+  it('falls back to estimate + margin when projections fail or are malformed', () => {
+    expect(bumpTarget(flat, null)).toEqual({ rate: 1.2, source: 'estimate' });
+    expect(bumpTarget({ ...flat, halfHourFee: 20 }, [])).toEqual({ rate: 22, source: 'estimate' });
+    expect(bumpTarget(flat, [{ blockVSize: NaN, medianFee: 1, feeRange: [] } as MempoolBlock]).source).toBe('estimate');
+  });
+  it('blocksAhead finds position behind full blocks', () => {
+    const bs = [full(2, 1.05), full(1.03, 1.01), { blockVSize: 255_000, medianFee: 1, feeRange: [1, 1] }];
+    expect(blocksAhead(1.0, bs)).toBe(2); expect(blocksAhead(1.02, bs)).toBe(1); expect(blocksAhead(3, bs)).toBe(0);
+  });
+  it('analyzeStuck: 1 sat/vB tx behind 3+ full blocks is not "wait" even when all estimates are 1', () => {
+    const bs = [full(2, 1.05), full(1.5, 1.02), full(1.2, 1.01), full(1.1, 1.005)];
+    const a = analyzeStuck(mkTx({ fee: 141, vin: [vin(0xfffffffd)] }), flat, { blocks: bs });
+    expect(a.advice).not.toBe('wait'); expect(a.targetRate).toBeCloseTo(2.1); expect(a.targetSource).toBe('projected');
+    expect(a.cpfpChildFee).toBe(Math.ceil(2.1 * (141 + 110)) - 141);
+  });
+  it('analyzeStuck: in the next projected block → wait', () => {
+    expect(analyzeStuck(mkTx({ fee: 141 * 3 }), flat, { blocks: [full(2, 1.05)] }).advice).toBe('wait');
+  });
+});

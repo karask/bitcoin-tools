@@ -64,3 +64,42 @@ All 10 pages return 200 in under 0.35 s, an unknown path returns 404, and the vi
 
 ## Not tested (needs a browser)
 QR code image rendering and scanning; ⌘K search and the sidebar; live DOM updates and status refresh in the payment-status tool; mobile layout visuals; the converter and fee checker UI with live prices; CPFP PSBT download in the UI.
+
+---
+# Retest, 2026-10-14 18:45–19:30 (Athens), after bbb7215 + 067b272
+Unit tests: 136/136 pass. All 10 pages return 200, an unknown path returns 404, and the github.io 301 redirect works. The network picker (mainnet/signet/testnet4) is present on the stuck, explainer, quantum and fee pages. The address checker has none, as intended, since it validates locally.
+Harness: `.qa/live.test.ts` (fixed: txs that are gone from the mempool or have no inputs are now skipped instead of passed to `analyzeStuck`, and the quantum test now passes hash160) and `.qa/retest.test.ts` (Signet, B1–B5).
+
+## Bug retests
+| Bug | Check | Result |
+|---|---|---|
+| B1 | 1A1zP1… (genesis), 12cbQLTF…, 1HLoD9…, 12c6DSiU… → `exposed` (reason: early P2PK output). 1BvBMSEY… (spent 5321×) → exposed. The not-exposed verdict is now always amber (`kind='warn'`) with "its own history has not revealed…" | PASS |
+| B2 | dustFor: p2wpkh 294, p2tr/p2wsh 330, p2sh 540, p2pkh 546. Outputs of 300 (p2wpkh) are counted as spendable, 329 (p2tr) and 545 (p2pkh) are excluded | PASS |
+| B3 | `amount=-1` and `-0.5` → "Amount must be positive" | PASS |
+| B4 | `amount=21000001` rejected; 21000000 accepted. buildBip21/QR rejects more than 21M. The converter shows a "more than 21,000,000 BTC" note (present in the deployed JS) | PASS (converter/QR checked in code and JS; visual check needs a browser) |
+| B5 | `garbage`, `lnbc1`, `lnbc`, 5000×`x` → "Not a valid Lightning invoice…"; empty → "Paste a Lightning invoice" | PASS |
+
+## End-to-end Signet test (stuck → CPFP)
+Signet was chosen because the new picker supports it, coins are free, and blocks come from a single signer.
+1. Faucet (faucet.rgbmap.org API, no captcha): **6360301a997db532acb007dabbb36fa536ee7b128f3469748746d57b7f7d3b40**, 50,000 sats to tb1qhjydlg8x983kvyfmudsgtay24dtn84aa7gc0pm (key in /workspace/qa_signet_key.wif, test coins only). Confirmed in block 326342.
+2. Low-fee tx **f79ebf7e719de4fc2017a0cd0d7cd087af93177e01c289a19c8b101a16a1c30a**: 141 vB, 15 sats fee = **0.106 sat/vB**, signals RBF (nSequence 0xfffffffd), 20,000 to the recipient + 29,985 change to me. **Accepted by mempool.space Signet** (sub-1 sat/vB relay works). It was **not** included in block 326342 (19:09), so it was stuck.
+3. Stuck tool analysis (`analyzeStuck` with live Signet data, effective rate from /v1/cpfp): position `below-minimum`, rbf=true, spendable outputs [0,1], advice **rbf-or-cpfp**, RBF fee **156** (=15+141×1 incremental, and ≥1 sat/vB × 141 ✔), CPFP child fee **236** for a 110 vB child (=1×(141+110)−15 ✔). ETA wording: "below what most queues are currently requiring…" ✔. **PASS**
+4. Bump performed as advised: CPFP child **689ea9b111d3b64d988624c0e43765a64affc14ff35606b64df759dd50df6a5c** (spends change vout 1, fee 236). Its actual vsize was **110 vB, exactly as the tool predicted**. The tool then reported the parent's effective rate at 1.006 sat/vB, flipped the advice to `wait`, and the UI text shows the effective rate together with "on its own it pays 0.11". **PASS**
+5. However, the 1.006 sat/vB package was **still not mined in block 326342**. The Signet mempool held ~255k vB at 1.003–9 sat/vB, but mempool.space `fees/recommended` reported 1 for every tier. To finish the test I RBF-replaced the child with **14fa6ba3b3963c638f5b13f8589f03017e79bb49375f1b4016487721a712b284** (fee 740, package ≈3 sat/vB). Confirmation status: see the addendum below.
+
+## New findings
+- **B6 (Low–Medium), live now.** The payment-status "No incoming payments found yet" message shows the literal text `${NET_NAME[currentNet()]}`. In `src/scripts/stuck.ts:48` the string is in single quotes, not backticks, and the deployed bundle hoisted.3-zPBU4g.js contains the literal. Repro: stuck tool, enter a fresh, never-used address (e.g. `?network=signet` with a new tb1 address). Fix: use a template literal.
+- **B7 (Low). Bump target is just the fee estimate.** When mempool.space reports every tier as 1 sat/vB, the tool's target (halfHourFee) equals the floor, so a bump "to target" can still sit behind a large queue of 1.00x sat/vB txs (seen on Signet: advice said 'wait' at 1.006 but the package was skipped by the next block). Suggestion: when the tiers collapse to the minimum, compare against `/v1/fees/mempool-blocks` (projected next-block median/range) and add +1 sat/vB or a "target slightly above the queue" hint. Mainnet has the same pattern today (all tiers = 1).
+- Info: a non-numeric BIP-21 amount (`amount=abc`) says "no scientific notation". Better: "Amount must be a number".
+
+## Regression (earlier tests)
+- Address checker: all 28 earlier cases are unchanged, PASS. (Note: my earlier `BC1QW508…FAJ9`/`tb1qw508…faj9` inputs were mistyped vectors and are correctly rejected by mempool.space as well. Valid upper-case `BC1QAR0SRRR7…` and BIP-173 `tb1qrp33…0sl5k7` are accepted.)
+- Quantum: P2TR exposed, reused P2WPKH exposed + move-funds advice, P2SH/P2WSH spent → depends. PASS
+- Stuck on mainnet: 8 live mempool txs (1.0–14.5 sat/vB) → wait, RBF/CPFP maths correct; genesis/confirmed tracking correct. PASS
+- BIP-21 parse (label/message decoding, >8 decimals, sci notation, req- params), BOLT11 spec vector. PASS
+
+## Still needs a browser
+QR image rendering and scanning; picker interaction and the ?network persistence across links; the CPFP PSBT builder UI and download (I built the child with python-bitcoin-utils instead); converter warning display; mobile layout; ⌘K search.
+
+### Addendum (19:21 Athens)
+Parent f79ebf7e… and replacement child 14fa6ba3… were **both confirmed in Signet block 326343 (19:19:37 Athens time)**. The first child 689ea9b1… was replaced and now returns 404, so the tool shows its not-found note, which mentions RBF replacement ✔. On the parent, the stuck tool reports advice `confirmed`, 1 confirmation ✔. The end-to-end flow worked: low fee → stuck → correct advice → CPFP → bump to a higher target (needed because of B7) → confirmed.

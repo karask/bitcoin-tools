@@ -58,3 +58,9 @@ describe('amount validation (B3/B4)', () => {
     expect(() => parseBip21('bitcoin:bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq?amount=30000000')).toThrow(/21,000,000/);
   });
 });
+
+describe('non-numeric amount', () => {
+  it('"abc" says it must be a number', () => { expect(() => formatBip21Amount('abc')).toThrow(/must be a number/); });
+  it('empty-ish junk says number', () => { expect(() => formatBip21Amount('1,5')).toThrow(/must be a number/); });
+  it('"1e3" still gets the scientific-notation message', () => { expect(() => formatBip21Amount('1e3')).toThrow(/scientific/); });
+});

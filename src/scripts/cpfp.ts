@@ -1,8 +1,8 @@
 import { currentNet, addressFitsNet, NET_NAME } from '../lib/network';
 const net = currentNet();
-import { getTx, getOutspends, getCpfp, getFees, getTxHex, getTipHeight, isTxid } from '../lib/api';
+import { getTx, getOutspends, getCpfp, getFees, getTxHex, getTipHeight, isTxid, getMempoolBlocks } from '../lib/api';
 import { decodeAddress } from '../lib/address';
-import { vsizeFromWeight } from '../lib/tx';
+import { vsizeFromWeight, bumpTarget } from '../lib/tx';
 import { loadAncestors, cpfpPackage, childVsize, checkSafety, buildChildPsbt, inputKindFromType, outKindFromAddressType, type InputKind } from '../lib/cpfp';
 import { qrSvg } from '../lib/qr';
 import { fmtSats, fmtRate, esc } from '../lib/format';
@@ -18,6 +18,7 @@ let fees: RecommendedFees | null = null;
 let ancestors: { fee: number; vsize: number }[] = [];
 let ancestorsOk = false;
 let tip = 0;
+let nextBlock: { rate: number; source: 'projected' | 'estimate' } = { rate: 1, source: 'estimate' };
 
 const TYPE_NAME: Record<string, string> = { v0_p2wpkh: 'SegWit (bc1q…)', v1_p2tr: 'Taproot (bc1p…)', p2pkh: 'Legacy (1…)', p2sh: 'P2SH (3…)', v0_p2wsh: 'SegWit script (bc1q…, long)', op_return: 'OP_RETURN data', p2pk: 'P2PK', multisig: 'bare multisig' };
 
@@ -29,7 +30,8 @@ onSubmit(loadForm, async () => {
   if (!isTxid(txid)) { showError(step2, new Error('Paste the stuck transaction’s ID: 64 characters of 0–9 and a–f.')); return; }
   loading(step2, 'Loading the stuck transaction from mempool.space…');
   try {
-    const [tx, spends, f, anc, h] = await Promise.all([getTx(txid), getOutspends(txid), getFees(), loadAncestors(() => getCpfp(txid)), getTipHeight().catch(() => 0)]);
+    const [tx, spends, f, anc, h, mb] = await Promise.all([getTx(txid), getOutspends(txid), getFees(), loadAncestors(() => getCpfp(txid)), getTipHeight().catch(() => 0), getMempoolBlocks().catch(() => null)]);
+    nextBlock = bumpTarget(f, mb);
     if (tx.status.confirmed) { step2.innerHTML = verdict('ok', 'This transaction is already confirmed', '<p>Nothing to fix — no CPFP needed.</p>'); return; }
     parent = null; fees = f; tip = h;
     if (!anc.ok) {
@@ -50,7 +52,7 @@ onSubmit(loadForm, async () => {
       <input id="cpfp-dest" class="mono" placeholder="bc1q… / bc1p… / 1… / 3…" autocomplete="off" spellcheck="false" required />
       <div class="row" style="margin-top:14px">
         <div><label for="cpfp-speed">4. Target speed</label>
-          <select id="cpfp-speed"><option value="fastestFee">Next block (~10 min) · ${fmtRate(f.fastestFee)}</option><option value="halfHourFee" selected>~30 minutes · ${fmtRate(f.halfHourFee)}</option><option value="hourFee">~1 hour · ${fmtRate(f.hourFee)}</option><option value="economyFee">Within a day · ${fmtRate(f.economyFee)}</option><option value="custom">Custom sat/vB</option></select></div>
+          <select id="cpfp-speed"><option value="next" selected>Next block (${nextBlock.source === 'projected' ? 'projected' : 'estimate + margin'}) · ${fmtRate(nextBlock.rate)}</option><option value="fastestFee">Fast estimate · ${fmtRate(f.fastestFee)}</option><option value="halfHourFee">~30 minutes · ${fmtRate(f.halfHourFee)}</option><option value="hourFee">~1 hour · ${fmtRate(f.hourFee)}</option><option value="economyFee">Within a day · ${fmtRate(f.economyFee)}</option><option value="custom">Custom sat/vB</option></select></div>
         <div id="cpfp-custom-wrap" hidden style="flex:0 1 160px"><label for="cpfp-custom">sat/vB</label><input id="cpfp-custom" inputmode="decimal" placeholder="e.g. 12" /></div>
         <div style="flex:0 1 auto"><button type="submit">Build PSBT</button></div>
       </div></form>
@@ -77,7 +79,7 @@ async function build() {
   const outKind = outKindFromAddressType(dest.type);
   if (!outKind) { out.innerHTML = verdict('bad', 'Unsupported destination type', `<p>Use a normal address from your wallet (${net === 'mainnet' ? 'bc1q…, bc1p…, 1… or 3…' : 'tb1q…, tb1p…, m…/n… or 2…'}).</p>`); return; }
   const sp = $<HTMLSelectElement>('#cpfp-speed').value;
-  const rate = sp === 'custom' ? Number($<HTMLInputElement>('#cpfp-custom').value) : fees[sp as keyof RecommendedFees];
+  const rate = sp === 'custom' ? Number($<HTMLInputElement>('#cpfp-custom').value) : sp === 'next' ? nextBlock.rate : fees[sp as keyof RecommendedFees];
   if (!isFinite(rate) || rate <= 0 || rate > 2000) { out.innerHTML = verdict('bad', 'Check the fee rate', '<p>Enter a positive number of sat/vB (for example 12).</p>'); return; }
   const cv = childVsize(kind, outKind);
   const parentV = vsizeFromWeight(parent.weight);

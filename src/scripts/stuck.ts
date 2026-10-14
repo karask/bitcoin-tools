@@ -1,5 +1,5 @@
 import { currentNet, netMismatch, withNet, NET_NAME } from '../lib/network';
-import { getTxOrNull, getFees, getOutspends, getCpfp, getTipHeight, getAddressTxs, isTxid } from '../lib/api';
+import { getTxOrNull, getFees, getOutspends, getCpfp, getTipHeight, getAddressTxs, isTxid, getMempoolBlocks } from '../lib/api';
 import { decodeAddress } from '../lib/address';
 import { confirmations, etaWording, incomingFromTxs, NOT_FOUND_NOTE } from '../lib/tracker';
 import { analyzeStuck, vsizeFromWeight, signalsRbf, CPFP_CHILD_VSIZE } from '../lib/tx';
@@ -45,7 +45,7 @@ async function showAddress(address: string) {
   const inc = incomingFromTxs(txs, address, tip);
   const pending = inc.filter((p) => p.status === 'mempool');
   let html = inc.length === 0
-    ? verdict('warn', 'No incoming payments found yet', '<p>Nothing has been received at this address on ${NET_NAME[currentNet()]} in its recent history. If you are expecting a payment, turn on auto-refresh and keep this page open.</p>')
+    ? verdict('warn', 'No incoming payments found yet', `<p>Nothing has been received at this address on ${NET_NAME[currentNet()]} in its recent history. If you are expecting a payment, turn on auto-refresh and keep this page open.</p>`)
     : verdict(pending.length ? 'warn' : 'ok', pending.length ? `${pending.length} incoming payment${pending.length > 1 ? 's' : ''} still waiting to confirm` : 'All recent incoming payments have landed (confirmed)',
       `<p>The ${inc.length} most recent payment${inc.length > 1 ? 's' : ''} into this address, newest first.${pending.length ? ' Click a waiting one to see why and how to speed it up.' : ''}</p>`);
   if (inc.length) html += `<div style="overflow-x:auto"><table><tr><th>Received</th><th>Status</th><th>When</th><th>Transaction</th></tr>${inc.slice(0, 25).map((p) => `<tr>
@@ -67,7 +67,7 @@ onSubmit(form, async () => {
 async function showTx(txid: string, quiet: boolean) {
   if (!quiet) loading(out, 'Looking up the transaction on mempool.space…');
   {
-    const [tx, fees, tip] = await Promise.all([getTxOrNull(txid), getFees(), getTipHeight().catch(() => undefined)]);
+    const [tx, fees, tip, blocks] = await Promise.all([getTxOrNull(txid), getFees(), getTipHeight().catch(() => undefined), getMempoolBlocks().catch(() => null)]);
     if (!tx) {
       out.innerHTML = verdict('warn', `Not found on ${NET_NAME[currentNet()]} (right now)`, `<p>${esc(NOT_FOUND_NOTE)}</p><p>If it was just sent, wait a minute and check again. If the sender used “Bump fee”, the transaction ID changes — ask them for the new one, or check the receiving address instead.</p>`);
       stop(); return;
@@ -79,7 +79,7 @@ async function showTx(txid: string, quiet: boolean) {
     const ownRate = tx.fee / (tx.weight / 4);
     const effRaw = (cpfp as { effectiveFeePerVsize?: unknown } | undefined)?.effectiveFeePerVsize;
     const eff = typeof effRaw === 'number' && isFinite(effRaw) ? effRaw : undefined;
-    const a = analyzeStuck(tx, fees, { effectiveRate: eff, outspends });
+    const a = analyzeStuck(tx, fees, { effectiveRate: eff, outspends, blocks });
     const vsize = vsizeFromWeight(tx.weight);
     let html = '';
     if (a.advice === 'confirmed') {
@@ -93,7 +93,7 @@ async function showTx(txid: string, quiet: boolean) {
         const title = a.position === 'below-minimum' ? 'This fee is below what most nodes currently accept.' : 'This transaction is paying less than the current market rate.';
         html += verdict('warn', title, `<p>${cmp} Transactions are picked by fee rate, so it may wait until the network gets quieter. That can take hours or days — but the bitcoin is not lost: it either confirms eventually or is dropped and the funds return to the sender’s wallet.</p>`);
         if (a.advice === 'rbf' || a.advice === 'rbf-or-cpfp') {
-          opts.push(`<p><strong>If you sent it</strong> from a wallet with a “Bump fee” / “Speed up” button, use that (RBF): aim for about ${fmtRate(a.targetRate)}, a total fee of at least ~${fmtSats(a.rbfFee!)}.</p>`);
+          opts.push(`<p><strong>If you sent it</strong> from a wallet with a “Bump fee” / “Speed up” button, use that (RBF): aim for about ${fmtRate(a.targetRate)} (${a.targetSource === 'projected' ? 'just above the fees in mempool.space’s next projected block' : 'the ~30-minute estimate plus a small margin'}), a total fee of at least ~${fmtSats(a.rbfFee!)}.</p>`);
         }
         if (a.advice === 'cpfp' || a.advice === 'rbf-or-cpfp') {
           opts.push(`<p><strong>If you are the receiver</strong> (or own the change), you can speed it up yourself with CPFP: roughly <strong>${fmtSats(a.cpfpChildFee!)}</strong> for a simple ~${CPFP_CHILD_VSIZE} vB child. <a href="${withNet(`?cpfp=${tx.txid}#cpfp`)}">Build the CPFP transaction below →</a></p>`);

@@ -80,6 +80,7 @@ export interface StuckAnalysis {
   rbf: boolean;
   spendableOutputs: number[]; // indexes of unspent, non-OP_RETURN outputs with value above dust
   targetRate: number;
+  targetSource: 'projected' | 'estimate';
   rbfFee?: number;
   cpfpChildFee?: number;
   childVsize: number;
@@ -87,7 +88,39 @@ export interface StuckAnalysis {
 }
 export const CPFP_CHILD_VSIZE = 110; // 1-in-1-out P2WPKH ≈ 110 vB
 
-export function analyzeStuck(tx: Tx, fees: RecommendedFees, opts: { effectiveRate?: number; outspends?: { spent: boolean }[] } = {}): StuckAnalysis {
+/** One projected block from mempool.space /v1/fees/mempool-blocks. */
+export interface MempoolBlock { blockVSize: number; medianFee: number; feeRange: number[]; nTx?: number; }
+const FULL_BLOCK_VB = 950_000;
+const up1 = (x: number) => Math.ceil(x * 10 - 1e-9) / 10;
+
+/**
+ * Fee rate to aim for so a bumped transaction lands in the next block.
+ * Uses the first projected block when it is full: aim just above its median, never below the half-hour estimate.
+ * If the next block is not full, anything above its lowest fee fits. Without projected-block data, fall back
+ * to the half-hour estimate plus a small margin (10%, at least 0.2 sat/vB), because a flat estimate (e.g. all 1 sat/vB)
+ * can leave a package behind a large backlog paying just above it.
+ */
+export function bumpTarget(fees: RecommendedFees, blocks?: MempoolBlock[] | null): { rate: number; source: 'projected' | 'estimate' } {
+  const b = Array.isArray(blocks) ? blocks[0] : undefined;
+  const valid = b && isFinite(b.blockVSize) && Array.isArray(b.feeRange) && b.feeRange.length > 0 && b.feeRange.every((x) => isFinite(x));
+  if (valid) {
+    const floor = Math.max(fees.minimumFee || 0.1, 0.1);
+    if (b.blockVSize < FULL_BLOCK_VB) return { rate: Math.max(floor, up1(b.feeRange[0] + 0.1)), source: 'projected' };
+    const mid = b.medianFee > 0 ? b.medianFee : b.feeRange[Math.floor(b.feeRange.length / 2)];
+    return { rate: Math.max(fees.halfHourFee, up1(mid + 0.1)), source: 'projected' };
+  }
+  return { rate: up1(fees.halfHourFee + Math.max(0.2, fees.halfHourFee * 0.1)), source: 'estimate' };
+}
+/** How many projected blocks are ahead of a transaction paying `rate` (0 = it is in the next block). */
+export function blocksAhead(rate: number, blocks: MempoolBlock[]): number {
+  for (let i = 0; i < blocks.length; i++) {
+    const b = blocks[i];
+    if (b.blockVSize < FULL_BLOCK_VB || rate >= (b.feeRange?.[0] ?? Infinity)) return i;
+  }
+  return blocks.length;
+}
+
+export function analyzeStuck(tx: Tx, fees: RecommendedFees, opts: { effectiveRate?: number; outspends?: { spent: boolean }[]; blocks?: MempoolBlock[] | null } = {}): StuckAnalysis {
   const vsize = vsizeFromWeight(tx.weight);
   const rate = opts.effectiveRate ?? feeRate(tx.fee, tx.weight / 4);
   const rbf = signalsRbf(tx);
@@ -95,14 +128,18 @@ export function analyzeStuck(tx: Tx, fees: RecommendedFees, opts: { effectiveRat
     .map((o, i) => ({ o, i }))
     .filter(({ o, i }) => o.scriptpubkey_type !== 'op_return' && o.value >= dustFor(o.scriptpubkey_type) && !(opts.outspends?.[i]?.spent))
     .map(({ i }) => i);
-  const targetRate = fees.halfHourFee;
+  const target = bumpTarget(fees, opts.blocks);
+  const targetRate = target.rate;
   const position: StuckAnalysis['position'] =
     rate >= fees.fastestFee ? 'above-fast' : rate >= fees.economyFee ? 'between' : rate >= fees.minimumFee ? 'below-economy' : 'below-minimum';
-  const base = { rate, vsize, rbf, spendableOutputs, targetRate, childVsize: CPFP_CHILD_VSIZE, position };
+  const base = { rate, vsize, rbf, spendableOutputs, targetRate, targetSource: target.source, childVsize: CPFP_CHILD_VSIZE, position };
   if (tx.status.confirmed) return { ...base, advice: 'confirmed' };
   const rbfFee = rbfReplacementFee(tx.fee, vsize, targetRate);
   const childFee = cpfpChildFee(tx.fee, vsize, CPFP_CHILD_VSIZE, targetRate);
-  if (rate >= fees.hourFee) return { ...base, advice: 'wait', rbfFee, cpfpChildFee: childFee };
+  const hasBlocks = Array.isArray(opts.blocks) && opts.blocks.length > 0;
+  // Within ~3 projected blocks (about 30 min) is fine to wait; without projections, use the hour estimate.
+  const okToWait = hasBlocks ? blocksAhead(rate, opts.blocks!) <= 2 : rate >= fees.hourFee;
+  if (okToWait) return { ...base, advice: 'wait', rbfFee, cpfpChildFee: childFee };
   const canCpfp = spendableOutputs.length > 0;
   // Under full-RBF (Bitcoin Core 28+ default) any unconfirmed tx can be replaced by whoever controls its inputs,
   // but `rbf` tells us whether it opted in, which matters for older nodes/wallets.
