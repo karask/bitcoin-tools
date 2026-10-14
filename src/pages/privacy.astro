@@ -13,7 +13,7 @@ import Base from '../layouts/Base.astro';
       <tr><td>Address checker</td><td>Nothing — validation is local. The address is sent only if you press the optional “Look up balance” button</td><td>Only on that button</td></tr>
       <tr><td>Quantum exposure checker</td><td>The address you enter (needed to see whether it has been spent from)</td><td>When you press “Check”</td></tr>
       <tr><td>Transaction explainer</td><td>The transaction ID you enter; BTC price</td><td>When you press “Explain”</td></tr>
-      <tr><td>Payment status &amp; stuck transaction helper</td><td>The transaction ID or address you enter; fee rates and chain height</td><td>When you press “Check”, and every 30 seconds while auto-refresh is on</td></tr>
+      <tr><td>Payment status &amp; stuck transaction helper</td><td>The transaction ID or address you enter; fee rates and chain height. The CPFP builder sends the stuck txid (and fetches the raw parent for legacy outputs) — never your destination address, keys or the PSBT</td><td>When you press “Check”, and every 30 seconds while auto-refresh is on</td></tr>
       <tr><td>Converter</td><td>Request for the current price, and the date you pick for historical prices</td><td>On page load / when you look up a date</td></tr>
       <tr><td>Receive address QR</td><td>Nothing by default. If you enter an amount in USD/EUR, only a price request is sent (not the address)</td><td>Only when using a fiat unit</td></tr>
       <tr><td>Payment request decoder</td><td>Nothing by default. Optional USD/EUR conversion fetches only the price</td><td>Only on the optional price button</td></tr>

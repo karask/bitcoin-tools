@@ -24,7 +24,7 @@ export interface Prices { time: number; USD: number; EUR: number; }
 export const getFees = () => get<import('./tx').RecommendedFees>('/v1/fees/recommended');
 export const getTx = (txid: string) => get<import('./tx').Tx>(`/tx/${txid}`);
 export const getOutspends = (txid: string) => get<{ spent: boolean }[]>(`/tx/${txid}/outspends`);
-export const getCpfp = (txid: string) => get<{ effectiveFeePerVsize?: number; ancestors?: unknown[] }>(`/v1/cpfp/${txid}`);
+export const getCpfp = (txid: string) => get<{ effectiveFeePerVsize?: number; ancestors?: { txid: string; fee: number; weight: number }[] }>(`/v1/cpfp/${txid}`);
 export const getAddress = (addr: string) => get<import('./quantum').AddressStats & { address: string }>(`/address/${addr}`);
 export const getAddressTxs = (addr: string) => get<import('./tx').Tx[]>(`/address/${addr}/txs`);
 /** Like getTx but returns null on 404 (payment status lookups). */
@@ -37,6 +37,7 @@ export async function getHistoricalPrice(unix: number): Promise<{ USD: number; E
   const r = await get<{ prices: { time: number; USD: number; EUR: number }[] }>(`/v1/historical-price?currency=EUR&timestamp=${unix}`);
   return r.prices?.[0] ?? null;
 }
+export const getTxHex = (txid: string) => get<string>(`/tx/${txid}/hex`, true);
 export const getTipHeight = () => get<string>('/blocks/tip/height', true).then(Number);
 
 export const isTxid = (s: string) => /^[0-9a-fA-F]{64}$/.test(s.trim());

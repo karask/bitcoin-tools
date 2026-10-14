@@ -1,22 +1,22 @@
 ---
 import Tool from '../../layouts/Tool.astro';
 const faq = [
-  { q: 'Is my bitcoin lost if the transaction is stuck?', a: 'No. An unconfirmed transaction either confirms eventually or is dropped by the network, in which case the coins remain spendable by the sender. Nobody can take the coins while it is pending.' },
-  { q: 'What is Replace-by-Fee (RBF)?', a: 'RBF lets the sender broadcast a new version of the same transaction with a higher fee. Miners prefer the higher fee, so the new version replaces the old one. Most modern wallets show it as “Bump fee” or “Speed up”.' },
-  { q: 'What is Child-Pays-for-Parent (CPFP)?', a: 'CPFP means spending an output of the stuck transaction in a new transaction with a high fee. Miners can only collect the child’s fee by also mining the parent, so they include both. The recipient can use it on an incoming payment, and the sender can use it on their change.' },
-  { q: 'My transaction does not signal RBF. Can it still be replaced?', a: 'Often, yes. Since Bitcoin Core 28 most nodes accept replacements regardless of the signal (“full-RBF”). However, many wallets only offer fee bumping for transactions that opted in, so CPFP may be easier in practice.' },
-  { q: 'Should I use a transaction accelerator?', a: 'Some mining pools offer paid acceleration. It can work, but be careful: only use well-known pools’ official services, and never send coins to someone who contacts you offering to speed up your transaction. Note that Binance’s Transaction Accelerator is being discontinued together with Binance Pool on 10 November 2026; bumping the fee yourself with RBF or CPFP does not depend on any such service.' },
-  { q: 'How many confirmations do I need?', a: 'One confirmation already makes reversal very unlikely for everyday amounts. Many exchanges and shops wait for 3 to 6 confirmations for larger payments.' },
-  { q: 'Why does “not found” not mean failed?', a: 'Bitcoin has no failure receipt. An ID that is not on mainnet right now may have a typo, belong to another network, have been replaced by a fee bump, have been dropped from mempools, or simply not have propagated yet. This tool says so and never claims certainty.' },
-  { q: 'Can I watch an address instead of a transaction?', a: 'Yes. Paste a receiving address to see its recent incoming payments and whether each has confirmed. This is handy when the sender bumped the fee and the transaction ID changed.' },
-  { q: 'Does auto-refresh notify me?', a: 'No. It only updates this page every 30 seconds while it is open and visible. There are no notifications and no backend watching for you. Each refresh repeats the lookup on mempool.space.' },
-  { q: 'How long until an unconfirmed transaction is dropped?', a: 'By default, Bitcoin Core nodes expire transactions after two weeks, or sooner if the mempool fills up and the fee is below the minimum. Wallets can rebroadcast, so “dropped” is not always final.' },
+  { q: 'My payment is stuck and my wallet has no “bump fee” button. What can I do?', a: 'If the stuck transaction pays you, you can use child-pays-for-parent (CPFP): spend your incoming output in a new transaction with a higher fee, so miners take both together. This page builds that transaction as an unsigned PSBT that you sign in a wallet that controls the output.' },
+  { q: 'What is Child-Pays-for-Parent (CPFP)?', a: 'Miners judge related unconfirmed transactions as a package. If a child spends an output of a stuck parent and pays a high fee, the average fee rate of the package rises, and miners include both. The receiver can do this with their incoming payment, and the sender with their change.' },
+  { q: 'Is a PSBT safe to paste into this site’s output?', a: 'A PSBT (Partially Signed Bitcoin Transaction) is an unsigned transaction proposal. It contains no keys and cannot move funds until you sign it in your own wallet. This site never asks for keys, seeds or xpubs, and never broadcasts anything.' },
+  { q: 'Will my hardware wallet sign it?', a: 'Often, via its desktop companion. Hardware wallets need key-derivation (BIP-32) details that this site cannot know. Wallets like Sparrow and Electrum usually recognise their own output and add those details when you import the PSBT. If yours cannot, use its built-in CPFP feature instead.' },
+  { q: 'My withdrawal from an exchange is stuck. What should I do?', a: 'Contact the exchange first: they control the sending wallet and can often bump the fee. The output that pays you is yours, though, so you can also CPFP it from your receiving wallet with the builder on this page.' },
+  { q: 'Should I use a transaction accelerator?', a: 'Only as a last resort. Services like the mempool.space Accelerator are paid, work out-of-band with participating miners and are not guaranteed. Never send coins to someone who contacts you offering to speed up a transaction. Binance’s Transaction Accelerator is being discontinued together with Binance Pool on 10 November 2026; RBF and CPFP do not depend on any such service.' },
+  { q: 'Is my bitcoin lost if the transaction is stuck?', a: 'No. An unconfirmed transaction either confirms eventually or is dropped, in which case the coins remain spendable by the sender. Nobody can take them while it is pending.' },
+  { q: 'Why does “not found” not mean failed?', a: 'Bitcoin has no failure receipt. An ID that is not on mainnet right now may have a typo, belong to another network, have been replaced by a fee bump, have been dropped, or not have propagated yet. This tool never claims certainty.' },
+  { q: 'How many confirmations do I need?', a: 'One confirmation already makes reversal very unlikely for everyday amounts. Many services wait for 3 to 6 for larger payments.' },
+  { q: 'Does auto-refresh notify me?', a: 'No. It only updates this page every 30 seconds while it is open and visible. No notifications, no backend.' },
 ];
 ---
-<Tool slug="stuck-bitcoin-transaction" title="Bitcoin Payment Status & Stuck Transaction Helper — track, RBF, CPFP" description="Has your Bitcoin payment landed? Paste a txid or address to see confirmations, or why it is stuck and whether to wait, bump the fee with RBF, or use CPFP." h1="Payment status & stuck transaction helper" lead="Has your payment landed? Paste a transaction ID or a receiving address. If it is still waiting, see why — and get a clear recommendation: wait, bump the fee (RBF), or use child-pays-for-parent (CPFP)." faq={faq}>
+<Tool slug="stuck-bitcoin-transaction" title="Stuck Bitcoin Payment? Free CPFP Builder (receiver-side, unsigned PSBT)" description="Your bitcoin payment is stuck and your wallet can’t fix it? Check its status, then build a child-pays-for-parent (CPFP) transaction as an unsigned PSBT to sign in Sparrow, Electrum or your hardware wallet. No keys, no broadcast." h1="Payment status & stuck tx" lead="Your payment is stuck and your wallet can’t fix it? Check whether it has landed — and if it pays you, build a child-pays-for-parent transaction that speeds it up. You sign it in your own wallet; we never see keys." faq={faq}>
   <Fragment slot="tool">
     <form id="stuck-form">
-      <label for="stuck-txid">Transaction ID or receiving address</label>
+      <label for="stuck-txid">1. Check status — transaction ID or receiving address</label>
       <div class="row"><input id="stuck-txid" class="mono" placeholder="txid (64 hex characters) or bc1q… / 1… / 3…" autocomplete="off" spellcheck="false" required />
       <div style="flex:0 1 200px"><label for="stuck-auto">Auto-refresh</label>
         <select id="stuck-auto"><option value="off" selected>Off</option><option value="on">Every 30 seconds</option></select></div>
@@ -25,27 +25,42 @@ const faq = [
     <p class="small muted">What you enter is sent to mempool.space to look it up. Mainnet only. Auto-refresh runs only while this tab is visible.</p>
     <p id="stuck-status" class="small muted" aria-live="polite"></p>
     <div id="stuck-result" class="result" aria-live="polite"></div>
+
+    <h2 id="cpfp">Speed it up yourself: CPFP builder</h2>
+    <p class="small muted">For receivers (or senders with change). Builds an <strong>unsigned</strong> transaction (PSBT) that spends your output from the stuck transaction to a fresh address of yours with a higher fee. You sign and broadcast it in your own wallet. We never ask for keys, seeds or xpubs, and never broadcast.</p>
+    <form id="cpfp-load">
+      <label for="cpfp-txid">1. Stuck transaction ID</label>
+      <div class="row"><input id="cpfp-txid" class="mono" placeholder="64 hex characters" autocomplete="off" spellcheck="false" required />
+      <div style="flex:0 1 auto"><button type="submit" class="secondary">Load outputs</button></div></div>
+    </form>
+    <div id="cpfp-step2" class="result" aria-live="polite"></div>
+    <div id="cpfp-result" class="result" aria-live="polite"></div>
   </Fragment>
 
-  <h2>Has my payment landed?</h2>
-  <p>A payment is final once a miner includes it in a block; every block after that adds a <strong>confirmation</strong>. Paste a transaction ID to see whether it is confirmed, still waiting in the mempool, or not found. Paste a receiving address to see its recent incoming payments. “Not found” never means “failed” — it may be a typo, the wrong network, a fee bump that changed the ID, a dropped transaction, or one that has not propagated yet.</p>
+  <h2>Which situation are you in?</h2>
+  <h3>You are the receiver</h3>
+  <p>Someone paid you, and it is stuck with a low fee. You cannot change their transaction, but the output that pays you is yours. Spend it with <strong>child-pays-for-parent</strong>: a new “child” transaction sending that output to another address of yours, with a fee high enough that miners take the parent and child together. The builder above works out the fee, checks it is safe, and gives you an unsigned PSBT to sign in a wallet that controls the output.</p>
+  <h3>An exchange withdrawal is stuck</h3>
+  <p>Contact the exchange first — they control the sending wallet and can often bump the fee themselves. The output paying you is yours, so you can also CPFP it from your receiving wallet.</p>
+  <h3>Your wallet is simple or custodial and has no bump button</h3>
+  <p>Usually the best choice is to <strong>wait</strong>: demand falls at night and at weekends. If the output sits in a wallet whose keys you control, you can import the seed into a wallet like Sparrow or Electrum and use CPFP there. As a last resort, a paid service like the <a href="https://mempool.space/accelerator">mempool.space Accelerator</a> asks participating miners to prioritise it — it is paid, out-of-band and not guaranteed.</p>
+  <h3>You sent it</h3>
+  <p>If you sent it from a wallet with a “Bump fee” or “Speed up” button, use that — it replaces the transaction with a higher-fee version (Replace-by-Fee). The status check shows a target fee.</p>
 
-  <h2>Why bitcoin transactions get stuck</h2>
-  <p>When you send bitcoin, your transaction is broadcast to the network and waits in each node’s <strong>mempool</strong> — a waiting room of unconfirmed transactions. Miners build blocks by choosing the transactions that pay the highest <strong>fee rate</strong> (satoshis per virtual byte). If many people are transacting and your fee rate is lower than what others are paying, your transaction keeps getting skipped. It is not broken; it is simply waiting in line.</p>
-  <p>This often happens when fees spike suddenly after you sent, or when a wallet chose a low fee to save money. The good news is that a stuck transaction is safe. It cannot be partially sent, and nobody can redirect it. It will either confirm when demand falls or eventually drop out of mempools, after which the coins can be spent again.</p>
-  <h3>Option 1: Wait</h3>
-  <p>If your fee is close to the current rates, waiting is usually the cheapest choice. Demand for block space tends to fall overnight and at weekends.</p>
-  <h3>Option 2: Replace-by-Fee (RBF)</h3>
-  <p>The sender can replace the transaction with a version that pays more. A replacement must pay a higher total fee than the original plus a little extra for the bandwidth it uses. Transactions “signal” RBF by setting a special field (the input sequence number) below a certain value; this tool checks that for you. Today most nodes accept replacements even without the signal, but your wallet has to support it.</p>
-  <h3>Option 3: Child-Pays-for-Parent (CPFP)</h3>
-  <p>Whoever controls one of the transaction’s outputs — the recipient, or the sender via their change — can spend that output right away in a new “child” transaction with a generous fee. Miners look at the combined fee rate of parent and child, so a high-fee child pulls the parent into a block. This tool estimates how big that child fee needs to be for a simple one-in, one-out child.</p>
+  <h2>How the CPFP math works</h2>
+  <p>Miners look at the <strong>package fee rate</strong>: the total fee of the stuck transaction, any unconfirmed transactions it depends on, and your child, divided by their total size. To reach a target rate, the child must pay <code>target × (package size + child size) − fees already paid</code>. The builder reads unconfirmed ancestors from mempool.space and includes them, because they must be mined too. It also makes sure the child pays at least the target rate on its own and at least the minimum relay fee.</p>
+  <p>The child has exactly one input (your output) and one output (your destination) — no change. Its size depends on the type of your output: native SegWit and Taproot are cheapest, legacy is most expensive. For multisig and other scripts, the size cannot be known in advance, so the builder refuses rather than guess.</p>
+  <h3>Safety checks</h3>
+  <ul>
+    <li>If the fee would be larger than your output, or leave less than the dust limit, the builder refuses.</li>
+    <li>If the fee is more than 20% of your output, it warns you; above 50%, it warns loudly. Waiting may be better.</li>
+    <li>If the stuck transaction already pays the target, it tells you a child is unnecessary.</li>
+  </ul>
   <h3>A note on Binance’s accelerator</h3>
-  <p>Binance’s Transaction Accelerator is being discontinued as part of the closure of Binance Pool on <strong>10 November 2026</strong> (07:00 UTC), according to Binance’s announcement (<a href="https://coinmarketcap.com/academy/article/binance-pool-cloud-mining-shutdown-nov-10">reported by CoinMarketCap</a>). RBF and CPFP do not depend on any accelerator: you can bump the fee yourself from a wallet that supports them, using the targets this page calculates.</p>
-  <h3>What this tool cannot know</h3>
-  <p>It cannot see which outputs belong to you or what your wallet supports. Fee estimates change minute by minute, and some mempools may already have dropped a very-low-fee transaction even if mempool.space still shows it. Treat the numbers as a good starting point, not a promise.</p>
+  <p>Binance’s Transaction Accelerator is being discontinued as part of the closure of Binance Pool on <strong>10 November 2026</strong> (07:00 UTC), according to Binance’s announcement (<a href="https://coinmarketcap.com/academy/article/binance-pool-cloud-mining-shutdown-nov-10">reported by CoinMarketCap</a>). CPFP and RBF do not depend on any accelerator.</p>
 
   <Fragment slot="example">
-    <p>Say your transaction is 141 vB and paid 282 sats (2 sat/vB), but the market now wants 15 sat/vB for confirmation within half an hour. If it signals RBF, the sender can replace it with a fee of at least 15 × 141 = <strong>2,115 sats</strong>. If instead the recipient uses CPFP with a 110 vB child, the pair must pay 15 × (141 + 110) = 3,765 sats in total, so the child pays 3,765 − 282 = <strong>3,483 sats</strong> (about 31.7 sat/vB on its own).</p>
+    <p>You received 50,000 sats to a bc1q address in a 141 vB transaction that paid only 282 sats (2 sat/vB); the market wants 15 sat/vB. A SegWit-to-SegWit child is about 110 vB, so the package must pay 15 × (141 + 110) = 3,765 sats. The parent paid 282, so the child pays <strong>3,483 sats</strong> (≈ 31.7 sat/vB on its own), sending 46,517 sats to your fresh address. That is 7% of the output — no warning. Import the PSBT in Sparrow, check the one input and one output, sign, broadcast.</p>
   </Fragment>
 </Tool>
-<script>import '../../scripts/stuck.ts';</script>
+<script>import '../../scripts/stuck.ts'; import '../../scripts/cpfp.ts';</script>
