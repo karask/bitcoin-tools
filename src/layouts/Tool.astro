@@ -1,6 +1,7 @@
 ---
 import Base from './Base.astro';
-import { TOOLS } from '../lib/tools';
+import Icon from '../components/Icon.astro';
+import { TOOLS, categoryOf } from '../lib/tools';
 interface Props { title: string; description: string; h1: string; lead: string; slug: string; faq: { q: string; a: string }[] }
 const { title, description, h1, lead, slug, faq } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
@@ -9,24 +10,44 @@ const jsonld = [
   { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) },
   { '@context': 'https://schema.org', '@type': 'WebApplication', name: h1, url, applicationCategory: 'FinanceApplication', operatingSystem: 'Any', offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } },
 ];
-const others = TOOLS.filter((t) => t.slug !== slug);
+const idx = TOOLS.findIndex((t) => t.slug === slug);
+const tool = TOOLS[idx];
+const cat = categoryOf(tool.category);
+const prev = TOOLS[idx - 1];
+const next = TOOLS[idx + 1];
 ---
-<Base title={title} description={description} jsonld={jsonld}>
-  <div class="crumbs"><a href={base}>Tools</a> / {h1}</div>
-  <h1>{h1}</h1>
-  <p class="lead">{lead}</p>
-  <section class="panel" aria-label="Tool"><slot name="tool" /></section>
+<Base title={title} description={description} jsonld={jsonld} current={slug}>
+  <header class={`tool-head cat-${tool.category}`}>
+    <nav class="crumbs" aria-label="Breadcrumb"><a href={base}>Toolbox</a><span aria-hidden="true">/</span><span>{cat.name}</span></nav>
+    <div class="th-row">
+      <span class={`tile tile-xl cat-${tool.category}`}><Icon name={tool.icon} size={30} /></span>
+      <h1>{h1}</h1>
+    </div>
+    <p class="lead">{lead}</p>
+    <div class="chips">
+      {tool.local
+        ? <span class="chip chip-ok"><Icon name="lock" size={14} /> Runs entirely in your browser</span>
+        : <span class="chip"><Icon name="globe" size={14} /> Live data from mempool.space</span>}
+      <span class="chip"><Icon name="eyeoff" size={14} /> No tracking</span>
+      <span class="chip"><Icon name="key" size={14} /> Never asks for your keys</span>
+    </div>
+  </header>
+
+  <section class={`panel cat-${tool.category}`} aria-label="Tool"><slot name="tool" /></section>
+
   <article class="prose">
     <slot />
     <h2>Worked example</h2>
-    <slot name="example" />
+    <div class="example"><slot name="example" /></div>
     <h2>Frequently asked questions</h2>
     <div class="faq">
       {faq.map((f) => <details><summary>{f.q}</summary><p>{f.a}</p></details>)}
     </div>
   </article>
-  <h2>More tools</h2>
-  <div class="grid">
-    {others.map((t) => <a class="card" href={`${base}tools/${t.slug}/`}><span class="icon" aria-hidden="true">{t.icon}</span><h3>{t.name}</h3><p>{t.blurb}</p></a>)}
-  </div>
+
+  <nav class="pager" aria-label="More tools">
+    {prev ? <a class={`spot pager-link cat-${prev.category}`} href={`${base}tools/${prev.slug}/`}><small><Icon name="back" size={14} /> Previous tool</small><span><span class={`tile cat-${prev.category}`}><Icon name={prev.icon} size={16} /></span>{prev.name}</span></a> : <span></span>}
+    {next ? <a class={`spot pager-link next cat-${next.category}`} href={`${base}tools/${next.slug}/`}><small>Next tool <Icon name="arrow" size={14} /></small><span><span class={`tile cat-${next.category}`}><Icon name={next.icon} size={16} /></span>{next.name}</span></a>
+          : <a class="spot pager-link next" href={`${base}#soon`}><small>Coming next <Icon name="arrow" size={14} /></small><span><span class="tile tile-plain"><Icon name="soon" size={16} /></span>See what’s on the workbench</span></a>}
+  </nav>
 </Base>

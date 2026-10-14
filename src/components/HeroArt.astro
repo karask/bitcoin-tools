@@ -1,0 +1,84 @@
+---
+// Isometric chain of blocks; the newest one hovers while it is "mined". Pure SVG + CSS, decorative.
+import Icon from './Icon.astro';
+const S = 50, C = Math.cos(Math.PI / 6);
+const P = (x: number, y: number, z: number) => [(x - y) * C * S, (x + y) * 0.5 * S - z * S];
+const pts = (...v: number[][]) => v.map((p) => p.map((n) => n.toFixed(1)).join(',')).join(' ');
+const at = (x: number, y: number, z: number) => P(x, y, z).map((n) => n.toFixed(1)).join(' ');
+
+const GAP = 2.3;
+const blocks = [0, 1, 2, 3].map((i) => ({ i, x: 0, y: -GAP * i, z: i === 3 ? 0.42 : 0, fresh: i === 3 }));
+
+function cube({ x, y, z }: { x: number; y: number; z: number }) {
+  const v = (dx: number, dy: number, dz: number) => P(x + dx, y + dy, z + dz);
+  const top = pts(v(0, 0, 1), v(1, 0, 1), v(1, 1, 1), v(0, 1, 1));
+  const inset = pts(v(0.22, 0.22, 1), v(0.78, 0.22, 1), v(0.78, 0.78, 1), v(0.22, 0.78, 1));
+  const left = pts(v(0, 1, 0), v(1, 1, 0), v(1, 1, 1), v(0, 1, 1));
+  const right = pts(v(1, 0, 0), v(1, 1, 0), v(1, 1, 1), v(1, 0, 1));
+  const lines = [0.28, 0.5, 0.72].map((h, k) => ({ a: v(1, 0.2, h), b: v(1, k === 1 ? 0.62 : 0.8, h) }));
+  const socket = pts(v(0.38, 1, 0.38), v(0.62, 1, 0.38), v(0.62, 1, 0.62), v(0.38, 1, 0.62));
+  const shadow = pts(P(x - 0.15, y - 0.15, 0), P(x + 1.25, y - 0.15, 0), P(x + 1.25, y + 1.25, 0), P(x - 0.15, y + 1.25, 0));
+  return { top, inset, left, right, lines, socket, shadow };
+}
+
+// links from block i (front) into the next block's front face
+const links = blocks.slice(0, -1).map((b, k) => {
+  const n = blocks[k + 1];
+  return { k, d: `M${at(0.5, b.y, 0.5)} L${at(0.5, n.y + 1, n.z + 0.5)}`, fresh: n.fresh };
+});
+
+const grid: string[] = [];
+for (let x = -4; x <= 5; x++) grid.push(`M${at(x, -11, 0)} L${at(x, 4, 0)}`);
+for (let y = -11; y <= 4; y++) grid.push(`M${at(-4, y, 0)} L${at(5, y, 0)}`);
+
+const fresh = blocks[3];
+const sparks = [[0.3, 0.35], [0.7, 0.3], [0.5, 0.6], [0.25, 0.7], [0.72, 0.68]].map(([dx, dy], k) => {
+  const [cx, cy] = P(fresh.x + dx, fresh.y + dy, fresh.z + 1);
+  const r = 0.07 * S;
+  return { k, d: `M${cx.toFixed(1)} ${(cy - r * 0.58).toFixed(1)} l${r.toFixed(1)} ${(r * 0.58).toFixed(1)} l${(-r).toFixed(1)} ${(r * 0.58).toFixed(1)} l${(-r).toFixed(1)} ${(-r * 0.58).toFixed(1)}z` };
+});
+const [gx, gy] = P(fresh.x + 0.5, fresh.y + 0.5, fresh.z + 0.5);
+const order = [...blocks].reverse();
+---
+<div class="hero-art" aria-hidden="true">
+  <svg viewBox="-70 -335 480 425" role="presentation">
+    <defs>
+      <radialGradient id="hg-glow"><stop offset="0" stop-color="#f7931a" stop-opacity=".55" /><stop offset="1" stop-color="#f7931a" stop-opacity="0" /></radialGradient>
+      <radialGradient id="hg-fade" cx="45%" cy="62%" r="55%"><stop offset=".25" stop-color="#fff" /><stop offset="1" stop-color="#fff" stop-opacity="0" /></radialGradient>
+      <mask id="hg-mask"><rect x="-70" y="-335" width="480" height="425" fill="url(#hg-fade)" /></mask>
+      <linearGradient id="hg-top" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd08a" /><stop offset="1" stop-color="#ffa333" /></linearGradient>
+      <linearGradient id="hg-left" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7931a" /><stop offset="1" stop-color="#e07800" /></linearGradient>
+      <linearGradient id="hg-right" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d06a00" /><stop offset="1" stop-color="#9c4a00" /></linearGradient>
+      <linearGradient id="hg-link" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#f7931a" stop-opacity=".25" /><stop offset="1" stop-color="#ffb84d" /></linearGradient>
+      <filter id="hg-blur" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7" /></filter>
+    </defs>
+
+    <g class="hero-grid" mask="url(#hg-mask)"><path d={grid.join(' ')} /></g>
+    <circle class="hero-glow" cx={gx} cy={gy} r="150" fill="url(#hg-glow)" />
+
+    <g class="hero-chain">
+      {blocks.map((b) => <polygon class:list={['hb-shadow', { fresh: b.fresh }]} points={cube(b).shadow} filter="url(#hg-blur)" />)}
+      {order.map((b) => {
+        const c = cube(b);
+        const link = links.find((l) => l.k === b.i - 1);
+        return <>
+          <g class:list={['hb', { fresh: b.fresh }]} style={`--i:${b.i}`}>
+            <polygon class="hb-left" points={c.left} />
+            <polygon class="hb-right" points={c.right} />
+            <polygon class="hb-top" points={c.top} />
+            <polygon class="hb-inset" points={c.inset} />
+            <polygon class="hb-socket" points={c.socket} />
+            {c.lines.map((l) => <line class="hb-line" x1={l.a[0]} y1={l.a[1]} x2={l.b[0]} y2={l.b[1]} />)}
+          </g>
+          {link && <path class:list={['hb-link', { fresh: link.fresh }]} d={link.d} />}
+          {link && <circle class="hb-pulse" r="3.2"><animateMotion dur="2.6s" begin={`${link.k * 0.85}s`} repeatCount="indefinite" path={link.d} /></circle>}
+        </>;
+      })}
+      <g class="hb-sparks">{sparks.map((s) => <path d={s.d} style={`--k:${s.k}`} />)}</g>
+    </g>
+  </svg>
+  <div class="hero-chip c1"><span class="tile cat-addresses"><Icon name="address" size={16} /></span><span><b>bc1p…x7kq</b><small>Valid · Taproot</small></span></div>
+  <div class="hero-chip c2"><span class="tile cat-money"><Icon name="fee" size={16} /></span><span><b>Fast</b><small>next block · ~10 min</small></span></div>
+  <div class="hero-chip c3"><span class="tile cat-transactions"><Icon name="explain" size={16} /></span><span><b>2 in → 3 out</b><small>payment + change</small></span></div>
+  <div class="hero-chip c4"><span class="live-dot"></span><span><b>Next block</b><small>being mined…</small></span></div>
+</div>

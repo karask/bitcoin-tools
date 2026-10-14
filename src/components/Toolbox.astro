@@ -1,0 +1,23 @@
+---
+import Icon from './Icon.astro';
+import { GROUPS, TOOLS, COMING_SOON } from '../lib/tools';
+interface Props { current?: string }
+const { current } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+<nav class="toolbox" aria-label="Toolbox">
+  <a class="tb-head" href={base}><Icon name="box" size={16} /> Toolbox <span class="tb-count">{TOOLS.length}</span></a>
+  {GROUPS.map((g) => (
+    <div class="tb-group">
+      <p class="tb-label"><span class={`dot cat-${g.id}`}></span>{g.name}</p>
+      <ul>
+        {g.tools.map((t) => (
+          <li><a class:list={['tb-item', `cat-${t.category}`]} href={`${base}tools/${t.slug}/`} aria-current={t.slug === current ? 'page' : undefined}>
+            <span class={`tile cat-${t.category}`}><Icon name={t.icon} size={15} /></span><span>{t.name}</span>
+          </a></li>
+        ))}
+      </ul>
+    </div>
+  ))}
+  <a class="tb-soon" href={`${base}#soon`}><Icon name="soon" size={15} /><span>{COMING_SOON.length} more tools on the workbench</span></a>
+</nav>

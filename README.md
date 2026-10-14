@@ -6,12 +6,12 @@ Simple, private Bitcoin tools that explain every result in plain English.
 
 | Tool | What it does |
 |---|---|
-| [Fee checker](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-fee-checker/) | Fee rates for ~10 min / ~1 h / ~1 day, total cost in sats, USD, EUR |
-| [Stuck transaction helper](https://kkarasavvas.com/bitcoin-tools/tools/stuck-bitcoin-transaction/) | Why a tx is unconfirmed; wait / RBF / CPFP with target fees |
 | [Address checker](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-address-checker/) | Local validation: network, type, checksum/typo, bech32 vs bech32m |
-| [Transaction explainer](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-transaction-explainer/) | Plain-English summary of any txid |
-| [Converter](https://kkarasavvas.com/bitcoin-tools/tools/sats-btc-converter/) | sats / BTC / USD / EUR, live and historical |
 | [Quantum exposure checker](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-quantum-exposure-checker/) | Whether an address's public key is revealed on-chain |
+| [Transaction explainer](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-transaction-explainer/) | Plain-English summary of any txid |
+| [Stuck transaction helper](https://kkarasavvas.com/bitcoin-tools/tools/stuck-bitcoin-transaction/) | Why a tx is unconfirmed; wait / RBF / CPFP with target fees |
+| [Converter](https://kkarasavvas.com/bitcoin-tools/tools/sats-btc-converter/) | sats / BTC / USD / EUR, live and historical |
+| [Fee checker](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-fee-checker/) | Fee rates for ~10 min / ~1 h / ~1 day, total cost in sats, USD, EUR |
 
 ## Privacy stance
 
@@ -28,7 +28,9 @@ npm test        # vitest unit tests (BIP-173/350 vectors, RBF, CPFP, fee math, q
 npm run build   # static output in dist/
 ```
 
-Pure logic lives in `src/lib/` (tested); small client-side scripts in `src/scripts/`; pages in `src/pages/`.
+Pure logic lives in `src/lib/` (tested); small client-side scripts in `src/scripts/`; pages in `src/pages/`; shared UI (toolbox sidebar, ⌘K search, hero art, icons) in `src/components/`.
+
+To add a tool, add an entry to `TOOLS` in `src/lib/tools.ts` (order and category matter) and create its page in `src/pages/tools/`. It then appears in the sidebar, ⌘K search, home page, footer and prev/next links automatically.
 
 Deployment: pushing to `main` runs tests and deploys to GitHub Pages (`.github/workflows/deploy.yml`).
 For a custom domain, build with `SITE=https://example.com BASE=/` and add `public/CNAME`.

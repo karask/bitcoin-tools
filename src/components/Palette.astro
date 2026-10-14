@@ -1,0 +1,47 @@
+---
+// ⌘K tool search. Also serves as the tool menu on small screens.
+import Icon from './Icon.astro';
+import { GROUPS, REPO } from '../lib/tools';
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const pages = [
+  { name: 'Home', href: base, icon: 'box', hint: 'All tools at a glance' },
+  { name: 'Privacy', href: `${base}privacy/`, icon: 'lock', hint: 'Exactly what is sent, and when' },
+  { name: 'About', href: `${base}about/`, icon: 'chat', hint: 'Who builds this and why' },
+  { name: 'Source on GitHub', href: REPO, icon: 'code', hint: 'MIT-licensed, contributions welcome' },
+];
+---
+<dialog id="palette" class="palette" aria-label="Search tools">
+  <div class="pal-box" tabindex="-1">
+    <div class="pal-search">
+      <Icon name="search" size={18} />
+      <input id="pal-q" type="text" placeholder="Search tools…" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="pal-list" aria-autocomplete="list" aria-label="Search tools" />
+      <button type="button" class="pal-close" data-close aria-label="Close"><kbd>esc</kbd></button>
+    </div>
+    <div id="pal-list" role="listbox" aria-label="Tools and pages">
+      {GROUPS.map((g) => (
+        <div class="pal-group" role="group" aria-label={g.name}>
+          <p class="pal-label" aria-hidden="true">{g.name}</p>
+          {g.tools.map((t) => (
+            <a class="pal-item" id={`pal-${t.slug}`} role="option" href={`${base}tools/${t.slug}/`} data-search={`${t.name} ${t.blurb} ${t.keywords} ${g.name}`.toLowerCase()}>
+              <span class={`tile cat-${t.category}`}><Icon name={t.icon} size={16} /></span>
+              <span class="pal-text"><b>{t.name}</b><small>{t.blurb}</small></span>
+              <Icon name="arrow" size={16} class="pal-go" />
+            </a>
+          ))}
+        </div>
+      ))}
+      <div class="pal-group" role="group" aria-label="Pages">
+        <p class="pal-label" aria-hidden="true">Pages</p>
+        {pages.map((p, i) => (
+          <a class="pal-item" id={`pal-page-${i}`} role="option" href={p.href} data-search={`${p.name} ${p.hint}`.toLowerCase()}>
+            <span class="tile tile-plain"><Icon name={p.icon} size={16} /></span>
+            <span class="pal-text"><b>{p.name}</b><small>{p.hint}</small></span>
+            <Icon name="arrow" size={16} class="pal-go" />
+          </a>
+        ))}
+      </div>
+    </div>
+    <p class="pal-empty" hidden>Nothing matches yet — more tools are on the way.</p>
+    <div class="pal-foot" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>↵</kbd> open</span><span><kbd>esc</kbd> close</span></div>
+  </div>
+</dialog>

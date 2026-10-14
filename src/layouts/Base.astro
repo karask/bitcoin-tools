@@ -1,8 +1,15 @@
 ---
+import '@fontsource-variable/inter';
+import '@fontsource-variable/space-grotesk';
+import '@fontsource-variable/jetbrains-mono';
 import '../styles/global.css';
+import Icon from '../components/Icon.astro';
+import Logo from '../components/Logo.astro';
+import Toolbox from '../components/Toolbox.astro';
+import Palette from '../components/Palette.astro';
 import { REPO } from '../lib/tools';
-interface Props { title: string; description: string; jsonld?: object[] }
-const { title, description, jsonld = [] } = Astro.props;
+interface Props { title: string; description: string; jsonld?: object[]; current?: string; wide?: boolean }
+const { title, description, jsonld = [], current, wide = false } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const canonical = new URL(Astro.url.pathname, Astro.site);
 ---
@@ -18,25 +25,44 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
   <meta property="og:description" content={description} />
   <meta property="og:type" content="website" />
   <meta property="og:url" content={canonical} />
-  <meta name="theme-color" content="#f7931a" />
+  <meta name="theme-color" content="#08090c" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://mempool.space; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'self'" />
   <meta name="referrer" content="no-referrer" />
   <link rel="icon" href={`${base}favicon.svg`} type="image/svg+xml" />
   <link rel="sitemap" href={`${base}sitemap-index.xml`} />
+  <script is:inline>try { var t = localStorage.getItem('theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}</script>
   {jsonld.map((j) => <script type="application/ld+json" set:html={JSON.stringify(j)} />)}
 </head>
 <body>
-  <a class="sr-only" href="#main">Skip to content</a>
-  <header class="site"><div class="wrap">
-    <a class="brand" href={base}><span class="logo" aria-hidden="true">₿</span> Bitcoin Tools</a>
-    <nav class="top" aria-label="Main">
-      <a href={base}>Tools</a><a href={`${base}privacy/`}>Privacy</a><a href={`${base}about/`}>About</a>
-    </nav>
-  </div></header>
-  <main id="main"><div class="wrap"><slot /></div></main>
-  <footer class="site"><div class="wrap">
-    <p>Free, open-source Bitcoin tools. No accounts, no tracking, no keys. Everything runs in your browser; live data comes from the public <a href="https://mempool.space">mempool.space</a> API. <a href={`${base}privacy/`}>Privacy</a> · <a href={REPO}>Source on GitHub</a> · <a href={`${base}about/`}>About</a></p>
-    <p class="small">Nothing here is financial advice. Always double-check before sending bitcoin.</p>
-  </div></footer>
+  <div class="backdrop" aria-hidden="true"></div>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site">
+    <div class="bar">
+      <a class="brand" href={base}><Logo /> <span>Bitcoin <em>Tools</em></span></a>
+      <button type="button" class="search-btn" data-palette aria-haspopup="dialog">
+        <Icon name="search" size={16} /><span class="sb-text">Search tools…</span><kbd class="kbd-mod">⌘K</kbd>
+      </button>
+      <nav class="top" aria-label="Main">
+        <a href={base}>Toolbox</a><a href={`${base}privacy/`}>Privacy</a><a href={`${base}about/`}>About</a>
+        <a href={REPO} class="icon-link" aria-label="Source on GitHub"><Icon name="code" size={18} /></a>
+      </nav>
+      <button type="button" class="icon-btn theme-btn" aria-label="Toggle dark mode"><Icon name="sun" size={18} class="i-sun" /><Icon name="moon" size={18} class="i-moon" /></button>
+      <button type="button" class="icon-btn menu-btn" data-palette aria-haspopup="dialog" aria-label="Open tools menu"><Icon name="menu" size={20} /></button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <aside class="side"><Toolbox current={current} /></aside>
+    <main id="main" class:list={['content', { 'content-wide': wide }]}><slot /></main>
+  </div>
+
+  <footer class="site">
+    <div class="foot">
+      <span>MIT © Kostas Karasavvas · Not financial advice</span>
+      <nav aria-label="Footer"><a href={`${base}privacy/`}>Privacy</a><a href={`${base}about/`}>About</a><a href={REPO}>GitHub</a></nav>
+    </div>
+  </footer>
+  <Palette />
+  <script>import '../scripts/chrome.ts';</script>
 </body>
 </html>

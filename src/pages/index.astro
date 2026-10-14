@@ -1,15 +1,59 @@
 ---
 import Base from '../layouts/Base.astro';
-import { TOOLS, COMING_SOON } from '../lib/tools';
+import Icon from '../components/Icon.astro';
+import HeroArt from '../components/HeroArt.astro';
+import Toolbox from '../components/Toolbox.astro';
+import { TOOLS, COMING_SOON, categoryOf, REPO } from '../lib/tools';
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const principles = [
+  { icon: 'eyeoff', title: 'Private by design', text: 'No backend, no accounts, no analytics, no cookies. Anything that can be computed locally is.' },
+  { icon: 'key', title: 'Never asks for your keys', text: 'No tool needs your seed phrase or private keys, and none will ever ask. If any website does, close it.' },
+  { icon: 'chat', title: 'Plain English first', text: 'A clear answer up top, the reasoning below, and the technical details one click away.' },
+  { icon: 'code', title: 'Open source', text: 'MIT-licensed on GitHub. Read the code, run it yourself, or suggest the next tool.' },
+];
 ---
-<Base title="Bitcoin Tools — simple, private, plain-English Bitcoin tools" description="Free Bitcoin tools explained in plain English: fee checker, stuck transaction helper, address checker, transaction explainer, sats converter and quantum exposure checker. No tracking, runs in your browser.">
-  <h1>Bitcoin tools, in plain English.</h1>
-  <p class="lead">Check fees, rescue a stuck payment, verify an address, or understand any transaction — without needing to be an expert. Everything runs in your browser. No accounts, no tracking, never any keys.</p>
-  <div class="grid">
-    {TOOLS.map((t) => <a class="card" href={`${base}tools/${t.slug}/`}><span class="icon" aria-hidden="true">{t.icon}</span><h2>{t.name}</h2><p>{t.blurb}</p></a>)}
-  </div>
-  <h2>Coming soon</h2>
-  <ul class="muted">{COMING_SOON.map((c) => <li>{c}</li>)}</ul>
-  <p class="note">Live data (fees, transactions, prices) comes from the public <a href="https://mempool.space">mempool.space</a> API, only when you ask for it. <a href={`${base}privacy/`}>Read exactly what is sent.</a></p>
+<Base wide title="Bitcoin Tools — simple, private, plain-English Bitcoin tools" description="Free Bitcoin tools explained in plain English: address checker, quantum exposure checker, transaction explainer, stuck transaction helper, sats converter and fee checker. No tracking, runs in your browser.">
+  <section class="hero">
+    <div class="hero-copy">
+      <p class="eyebrow"><span class="eyebrow-tag"><Icon name="spark" size={12} /> {TOOLS.length} tools</span> Free · open source · no sign-up</p>
+      <h1>Your Bitcoin <span class="grad">workbench</span>.</h1>
+      <p class="lead">Check an address, decode a transaction, rescue a stuck payment or price your fee — with every answer explained in plain English. Everything runs in your browser. No accounts, no tracking, and nothing ever asks for your keys.</p>
+    </div>
+    <!-- On small screens the sidebar is hidden, so the toolbox shows here, before the artwork. -->
+    <div class="home-toolbox"><Toolbox /></div>
+    <HeroArt />
+  </section>
+
+  <section class="section">
+    <div class="principles">
+      {principles.map((p) => (
+        <div class="principle spot">
+          <span class="p-icon"><Icon name={p.icon} size={20} /></span>
+          <h3>{p.title}</h3>
+          <p>{p.text}</p>
+        </div>
+      ))}
+    </div>
+    <p class="note">Live data (fees, transactions, prices) comes from the public <a href="https://mempool.space">mempool.space</a> API, only when you ask for it. <a href={`${base}privacy/`}>Read exactly what is sent.</a></p>
+  </section>
+
+  <section id="soon" class="section">
+    <div class="section-head">
+      <p class="kicker">On the workbench</p>
+      <h2>Tools being built next</h2>
+      <p class="muted">The toolbox keeps growing. Here is what is in progress.</p>
+    </div>
+    <div class="soon-grid">
+      {COMING_SOON.map((c) => (
+        <div class={`soon cat-${c.category}`}>
+          <span class="tile tile-ghost"><Icon name="soon" size={16} /></span>
+          <span><b>{c.name}</b><small>{categoryOf(c.category).name}</small></span>
+        </div>
+      ))}
+      <a class="soon soon-cta" href={`${REPO}/issues`}>
+        <span class="tile tile-ghost"><Icon name="spark" size={16} /></span>
+        <span><b>Suggest a tool</b><small>Open an issue on GitHub</small></span>
+      </a>
+    </div>
+  </section>
 </Base>

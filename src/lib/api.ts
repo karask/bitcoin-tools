@@ -3,11 +3,15 @@ export const API = 'https://mempool.space/api';
 
 export class ApiError extends Error {}
 
+/** Give up instead of waiting for the browser's own (often minute-long) network timeout. */
+export const TIMEOUT_MS = 15_000;
+
 async function get<T>(path: string, text = false): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(API + path);
-  } catch {
+    res = await fetch(API + path, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'TimeoutError') throw new ApiError(`mempool.space did not respond within ${TIMEOUT_MS / 1000} seconds. It may be down, or blocked on your network. Please try again in a moment.`);
     throw new ApiError('Could not reach mempool.space. Check your internet connection, or try again in a moment (an ad-blocker or privacy extension may also block it).');
   }
   if (res.status === 404 || res.status === 400) throw new ApiError('Not found. Double-check what you entered — it may contain a typo, or belong to a different network (this site uses Bitcoin mainnet).');
