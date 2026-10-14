@@ -69,7 +69,7 @@ async function showTx(txid: string, quiet: boolean) {
   {
     const [tx, fees, tip, blocks] = await Promise.all([getTxOrNull(txid), getFees(), getTipHeight().catch(() => undefined), getMempoolBlocks().catch(() => null)]);
     if (!tx) {
-      out.innerHTML = verdict('warn', `Not found on ${NET_NAME[currentNet()]} (right now)`, `<p>${esc(NOT_FOUND_NOTE)}</p><p>If it was just sent, wait a minute and check again. If the sender used “Bump fee”, the transaction ID changes — ask them for the new one, or check the receiving address instead.</p>`);
+      out.innerHTML = verdict('warn', `Not found on ${NET_NAME[currentNet()]} (right now)`, `<p>${esc(currentNet() === 'mainnet' ? NOT_FOUND_NOTE : NOT_FOUND_NOTE.replace('Bitcoin mainnet', NET_NAME[currentNet()]).replace('(testnet/signet)', '(for example mainnet — check the network selector)'))}</p><p>If it was just sent, wait a minute and check again. If the sender used “Bump fee”, the transaction ID changes — ask them for the new one, or check the receiving address instead.</p>`);
       stop(); return;
     }
     const [outspends, cpfp] = await Promise.all([
