@@ -13,8 +13,6 @@ const jsonld = [
 const idx = TOOLS.findIndex((t) => t.slug === slug);
 const tool = TOOLS[idx];
 const cat = categoryOf(tool.category);
-const prev = TOOLS[idx - 1];
-const next = TOOLS[idx + 1];
 ---
 <Base title={title} description={description} jsonld={jsonld} current={slug}>
   <header class={`tool-head cat-${tool.category}`}>
@@ -44,10 +42,4 @@ const next = TOOLS[idx + 1];
       {faq.map((f) => <details><summary>{f.q}</summary><p>{f.a}</p></details>)}
     </div>
   </article>
-
-  <nav class="pager" aria-label="More tools">
-    {prev ? <a class={`spot pager-link cat-${prev.category}`} href={`${base}tools/${prev.slug}/`}><small><Icon name="back" size={14} /> Previous tool</small><span><span class={`tile cat-${prev.category}`}><Icon name={prev.icon} size={16} /></span>{prev.name}</span></a> : <span></span>}
-    {next ? <a class={`spot pager-link next cat-${next.category}`} href={`${base}tools/${next.slug}/`}><small>Next tool <Icon name="arrow" size={14} /></small><span><span class={`tile cat-${next.category}`}><Icon name={next.icon} size={16} /></span>{next.name}</span></a>
-          : <a class="spot pager-link next" href={`${base}#soon`}><small>Coming next <Icon name="arrow" size={14} /></small><span><span class="tile tile-plain"><Icon name="soon" size={16} /></span>See what’s on the workbench</span></a>}
-  </nav>
 </Base>

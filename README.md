@@ -30,7 +30,7 @@ npm run build   # static output in dist/
 
 Pure logic lives in `src/lib/` (tested); small client-side scripts in `src/scripts/`; pages in `src/pages/`; shared UI (toolbox sidebar, ⌘K search, hero art, icons) in `src/components/`.
 
-To add a tool, add an entry to `TOOLS` in `src/lib/tools.ts` (order and category matter) and create its page in `src/pages/tools/`. It then appears in the sidebar, ⌘K search, home page, footer and prev/next links automatically.
+To add a tool, add an entry to `TOOLS` in `src/lib/tools.ts` (order and category matter) and create its page in `src/pages/tools/`. It then appears in the toolbox sidebar and the ⌘K search automatically.
 
 Deployment: pushing to `main` runs tests and deploys to GitHub Pages (`.github/workflows/deploy.yml`).
 For a custom domain, build with `SITE=https://example.com BASE=/` and add `public/CNAME`.

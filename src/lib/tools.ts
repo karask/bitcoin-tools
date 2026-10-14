@@ -1,4 +1,4 @@
-// The toolbox. Adding a tool here puts it in the sidebar, the ⌘K search, the home page and prev/next links.
+// The toolbox. Adding a tool here puts it in the toolbox sidebar and the ⌘K search.
 // Order matters: tools are listed in this order, grouped by category.
 export const CATEGORIES = [
   { id: 'addresses', name: 'Addresses', blurb: 'Check where coins go and what an address reveals.' },

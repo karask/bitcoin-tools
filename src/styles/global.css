@@ -230,14 +230,6 @@ tr:last-child td { border-bottom: 0; }
 .faq details p { margin: 0 0 18px; color: var(--muted); }
 .note { font-size: .9rem; color: var(--muted); border-left: 3px solid var(--accent); padding-left: 14px; }
 
-/* pager */
-.pager { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 64px; }
-.pager-link { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface); text-decoration: none; color: var(--text); transition: border-color .2s, transform .2s; }
-.pager-link.next { align-items: flex-end; text-align: right; }
-.pager-link small { display: inline-flex; align-items: center; gap: 6px; color: var(--faint); font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
-.pager-link > span { display: inline-flex; align-items: center; gap: 10px; font: 650 1.05rem var(--font-display); }
-.pager-link:hover { border-color: color-mix(in srgb, var(--cat, var(--accent)) 50%, var(--border)); transform: translateY(-2px); }
-
 /* spotlight */
 .spot { --mx: 50%; --my: 0%; }
 .spot::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .3s;
@@ -385,8 +377,6 @@ footer.site .foot-name { color: var(--text); font-weight: 600; }
   .row button { width: 100%; }
   .verdict { padding: 16px 16px 16px 54px; }
   .verdict::before { left: 14px; width: 28px; height: 28px; }
-  .pager { grid-template-columns: minmax(0, 1fr); }
-  .pager > span:empty { display: none; }
   .hero h1 { font-size: clamp(2.5rem, 12vw, 3.4rem); }
   .hero-chip { transform-origin: center; scale: .82; }
   .hero-chip.c3 { display: none; }
