@@ -1,18 +1,76 @@
-import { getTx, getFees, getOutspends, getCpfp, isTxid } from '../lib/api';
+import { getTxOrNull, getFees, getOutspends, getCpfp, getTipHeight, getAddressTxs, isTxid } from '../lib/api';
+import { decodeAddress } from '../lib/address';
+import { confirmations, etaWording, incomingFromTxs, NOT_FOUND_NOTE } from '../lib/tracker';
 import { analyzeStuck, vsizeFromWeight, signalsRbf, CPFP_CHILD_VSIZE } from '../lib/tx';
-import { fmtSats, fmtRate, fmtDate, esc, ago } from '../lib/format';
+import { fmtBtc, fmtSats, fmtRate, fmtDate, esc, ago } from '../lib/format';
 import { $, loading, showError, verdict, stat, tech, onSubmit, fromQuery } from './ui';
 
 const form = $<HTMLFormElement>('#stuck-form');
 const input = $<HTMLInputElement>('#stuck-txid');
 const out = $('#stuck-result');
 
-onSubmit(form, async () => {
-  const txid = input.value.trim().toLowerCase();
-  if (!isTxid(txid)) { showError(out, new Error('A transaction ID is 64 characters long and uses only 0–9 and a–f. Please check what you pasted.')); return; }
-  loading(out, 'Looking up the transaction on mempool.space…');
+const auto = $<HTMLSelectElement>('#stuck-auto');
+const status = $('#stuck-status');
+let timer: number | undefined;
+let current = '';
+let busy = false;
+const stop = () => { if (timer) { clearInterval(timer); timer = undefined; } };
+function start() {
+  stop();
+  if (auto.value === 'on' && current) timer = window.setInterval(() => { if (document.visibilityState === 'visible') check(current, true); }, 30_000);
+}
+auto.addEventListener('change', () => { start(); status.textContent = timer ? 'Auto-refresh on: checking every 30 seconds while this tab is visible.' : ''; });
+
+async function check(q: string, quiet = false) {
+  if (busy) return;
+  busy = true;
   try {
-    const [tx, fees] = await Promise.all([getTx(txid), getFees()]);
+    if (isTxid(q)) await showTx(q.toLowerCase(), quiet);
+    else {
+      const a = decodeAddress(q);
+      if (!a.valid) { out.innerHTML = verdict('bad', 'That is neither a transaction ID nor a valid address', `<p>A transaction ID is 64 characters of 0–9 and a–f. ${esc(a.error)}</p>`); stop(); return; }
+      if (a.network !== 'mainnet') { out.innerHTML = verdict('warn', 'Test-network address', '<p>This page follows Bitcoin mainnet only.</p>'); stop(); return; }
+      if (!quiet) loading(out, 'Looking up recent payments on mempool.space…');
+      await showAddress(a.address);
+    }
+    status.textContent = `Last checked ${new Date().toLocaleTimeString()}${timer ? ' · refreshing every 30 seconds while this page is open' : ''}.`;
+  } catch (e) {
+    if (!quiet) showError(out, e); else status.textContent = `Refresh failed at ${new Date().toLocaleTimeString()} — will try again.`;
+  } finally { busy = false; }
+}
+
+async function showAddress(address: string) {
+  const [txs, tip] = await Promise.all([getAddressTxs(address), getTipHeight()]);
+  const inc = incomingFromTxs(txs, address, tip);
+  const pending = inc.filter((p) => p.status === 'mempool');
+  let html = inc.length === 0
+    ? verdict('warn', 'No incoming payments found yet', '<p>Nothing has been received at this address on mainnet in its recent history. If you are expecting a payment, turn on auto-refresh and keep this page open.</p>')
+    : verdict(pending.length ? 'warn' : 'ok', pending.length ? `${pending.length} incoming payment${pending.length > 1 ? 's' : ''} still waiting to confirm` : 'All recent incoming payments have landed (confirmed)',
+      `<p>The ${inc.length} most recent payment${inc.length > 1 ? 's' : ''} into this address, newest first.${pending.length ? ' Click a waiting one to see why and how to speed it up.' : ''}</p>`);
+  if (inc.length) html += `<div style="overflow-x:auto"><table><tr><th>Received</th><th>Status</th><th>When</th><th>Transaction</th></tr>${inc.slice(0, 25).map((p) => `<tr>
+    <td>${fmtBtc(p.value)}<br><span class="small muted">${fmtSats(p.value)}</span></td>
+    <td>${p.status === 'confirmed' ? `Confirmed (${p.confirmations!.toLocaleString()})` : `Waiting · ${fmtRate(p.feeRate)}`}</td>
+    <td>${p.blockTime ? esc(ago(p.blockTime)) : '—'}</td>
+    <td class="mono small"><a href="?q=${p.txid}">${p.txid.slice(0, 12)}…</a></td></tr>`).join('')}</table></div>
+    <p class="small muted">Only recent history is shown (mempool.space returns a limited number of transactions per request).</p>`;
+  out.innerHTML = html;
+}
+
+onSubmit(form, async () => {
+  current = input.value.trim();
+  if (!current) return;
+  start();
+  await check(current);
+});
+
+async function showTx(txid: string, quiet: boolean) {
+  if (!quiet) loading(out, 'Looking up the transaction on mempool.space…');
+  {
+    const [tx, fees, tip] = await Promise.all([getTxOrNull(txid), getFees(), getTipHeight().catch(() => undefined)]);
+    if (!tx) {
+      out.innerHTML = verdict('warn', 'Not found on mainnet (right now)', `<p>${esc(NOT_FOUND_NOTE)}</p><p>If it was just sent, wait a minute and check again. If the sender used “Bump fee”, the transaction ID changes — ask them for the new one, or check the receiving address instead.</p>`);
+      stop(); return;
+    }
     const [outspends, cpfp] = await Promise.all([
       getOutspends(txid).catch(() => undefined),
       tx.status.confirmed ? Promise.resolve(undefined) : getCpfp(txid).catch(() => undefined),
@@ -23,9 +81,9 @@ onSubmit(form, async () => {
     const vsize = vsizeFromWeight(tx.weight);
     let html = '';
     if (a.advice === 'confirmed') {
-      html += verdict('ok', 'Good news: this transaction is confirmed.', `<p>It was included in block ${tx.status.block_height?.toLocaleString()}${tx.status.block_time ? ` on ${esc(fmtDate(tx.status.block_time))} (${ago(tx.status.block_time)})` : ''}. It is not stuck — if the recipient does not see it yet, their wallet may need to refresh or wait for more confirmations.</p>`);
+      html += verdict('ok', 'Good news: this transaction is confirmed.', `<p>${tip && tx.status.block_height ? `${confirmations(tx.status.block_height, tip).toLocaleString()} confirmation(s). ` : ''}It was included in block ${tx.status.block_height?.toLocaleString()}${tx.status.block_time ? ` on ${esc(fmtDate(tx.status.block_time))} (${ago(tx.status.block_time)})` : ''}. It is not stuck — if the recipient does not see it yet, their wallet may need to refresh or wait for more confirmations.</p>`);
     } else {
-      const cmp = `It pays <strong>${fmtRate(a.rate)}</strong>${eff && Math.abs(eff - ownRate) > 0.01 ? ` (effective rate, including related unconfirmed transactions; on its own it pays ${fmtRate(ownRate)})` : ''}. Right now about ${fmtRate(fees.fastestFee)} gets into the next block, ${fmtRate(fees.hourFee)} within about an hour, and ${fmtRate(fees.economyFee)} is the low end.`;
+      const cmp = `It pays <strong>${fmtRate(a.rate)}</strong>${eff && Math.abs(eff - ownRate) > 0.01 ? ` (effective rate, including related unconfirmed transactions; on its own it pays ${fmtRate(ownRate)})` : ''}. Right now about ${fmtRate(fees.fastestFee)} gets into the next block, ${fmtRate(fees.hourFee)} within about an hour, and ${fmtRate(fees.economyFee)} is the low end. ${esc(etaWording(a.rate, fees))}`;
       const opts: string[] = [];
       if (a.advice === 'wait') {
         html += verdict('ok', 'Just wait — the fee looks high enough.', `<p>${cmp} This transaction should confirm soon, probably within the hour. No action needed.</p>`);
@@ -39,7 +97,7 @@ onSubmit(form, async () => {
           opts.push(`<h3>${a.advice === 'cpfp' ? 'Option' : 'Option 2'}: Child-pays-for-parent (CPFP) — for whoever owns an output</h3><p>If one of the unspent outputs belongs to you (the recipient’s payment, or the sender’s change), you can spend it in a new “child” transaction with a high fee. Miners include both together. For a simple one-input, one-output child (~${CPFP_CHILD_VSIZE} vB) to lift the pair to about ${fmtRate(a.targetRate)}, the child needs a fee of roughly <strong>${fmtSats(a.cpfpChildFee!)}</strong> (≈ ${fmtRate(a.cpfpChildFee! / CPFP_CHILD_VSIZE)}). Many wallets offer this as “Bump fee” on an incoming payment.</p>`);
         }
         if (a.advice === 'cpfp') opts.push(`<p class="small muted">It does not signal RBF. Most nodes now run with “full-RBF” (Bitcoin Core 28+ default), so a sender’s replacement would often still propagate — but many wallets will not offer to bump a non-signalling transaction.</p>`);
-        if (a.advice === 'wait-or-accelerate') opts.push(`<h3>Your options</h3><p>It does not signal RBF and has no unspent outputs to use for CPFP, so the usual choices are to <strong>wait</strong>, or use a paid transaction accelerator offered by some mining pools. Under full-RBF, the sender may still be able to replace it with wallet software that supports it.</p>`);
+        if (a.advice === 'wait-or-accelerate') opts.push(`<h3>Your options</h3><p>It does not signal RBF and has no unspent outputs to use for CPFP, so the usual choices are to <strong>wait</strong>, or use a paid transaction accelerator offered by some mining pools (note: Binance’s accelerator closes on 10 Nov 2026 with Binance Pool). Under full-RBF, the sender may still be able to replace it with wallet software that supports it.</p>`);
         html += opts.join('');
       }
       html += `<p class="small muted">Fee estimates move quickly and no one can promise when a transaction confirms. Never send bitcoin to anyone promising to “unstick” your transaction for you.</p>`;
@@ -55,6 +113,7 @@ onSubmit(form, async () => {
       <tr><td>Recommended fees</td><td class="mono">${esc(JSON.stringify(fees))}</td></tr>
     </table>`);
     out.innerHTML = html;
-  } catch (e) { showError(out, e); }
-});
+    if (tx.status.confirmed && tip && tx.status.block_height && confirmations(tx.status.block_height, tip) >= 6) stop();
+  }
+}
 fromQuery(input, form);

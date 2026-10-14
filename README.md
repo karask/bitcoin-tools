@@ -9,10 +9,9 @@ Simple, private Bitcoin tools that explain every result in plain English.
 | [Address checker](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-address-checker/) | Local validation: network, type, checksum/typo, bech32 vs bech32m |
 | [Quantum exposure checker](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-quantum-exposure-checker/) | Whether an address's public key is revealed on-chain |
 | [Transaction explainer](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-transaction-explainer/) | Plain-English summary of any txid |
-| [Stuck transaction helper](https://kkarasavvas.com/bitcoin-tools/tools/stuck-bitcoin-transaction/) | Why a tx is unconfirmed; wait / RBF / CPFP with target fees |
+| [Payment status & stuck tx](https://kkarasavvas.com/bitcoin-tools/tools/stuck-bitcoin-transaction/) | Has it landed? txid or address status; wait / RBF / CPFP with target fees |
 | [Converter](https://kkarasavvas.com/bitcoin-tools/tools/sats-btc-converter/) | sats / BTC / USD / EUR, live and historical |
 | [Receive address QR](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-qr-code-generator/) | BIP-21 payment link + QR from an address |
-| [Payment tracker](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-payment-tracker/) | Watch a txid or address for confirmations |
 | [Payment request decoder](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-payment-request-decoder/) | Decode bitcoin: URIs and Lightning BOLT11 invoices |
 | [Fee checker](https://kkarasavvas.com/bitcoin-tools/tools/bitcoin-fee-checker/) | Fee rates for ~10 min / ~1 h / ~1 day, total cost in sats, USD, EUR |
 

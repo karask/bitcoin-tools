@@ -27,7 +27,7 @@ export const getOutspends = (txid: string) => get<{ spent: boolean }[]>(`/tx/${t
 export const getCpfp = (txid: string) => get<{ effectiveFeePerVsize?: number; ancestors?: unknown[] }>(`/v1/cpfp/${txid}`);
 export const getAddress = (addr: string) => get<import('./quantum').AddressStats & { address: string }>(`/address/${addr}`);
 export const getAddressTxs = (addr: string) => get<import('./tx').Tx[]>(`/address/${addr}/txs`);
-/** Like getTx but returns null on 404 (for payment tracker). */
+/** Like getTx but returns null on 404 (payment status lookups). */
 export async function getTxOrNull(txid: string): Promise<import('./tx').Tx | null> {
   try { return await getTx(txid); }
   catch (e) { if (e instanceof ApiError && /Not found/.test(e.message)) return null; throw e; }

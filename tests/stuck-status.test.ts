@@ -10,7 +10,7 @@ const tx = (p: Partial<Tx> & { fee?: number; weight?: number; status?: Tx['statu
   size: 200, weight: 564, fee: 2820, status: { confirmed: false }, ...p,
 });
 
-describe('tracker', () => {
+describe('payment status (stuck helper)', () => {
   it('not-found is honest', () => {
     const s = trackTx(null, 800000, fees);
     expect(s.kind).toBe('not-found');
