@@ -7,7 +7,6 @@ export default defineConfig({
   site: process.env.SITE || 'https://kkarasavvas.com',
   base: process.env.BASE || '/bitcoin-tools',
   trailingSlash: 'always',
-  // The payment tracker was merged into the stuck-transaction page.
-  redirects: { '/tools/bitcoin-payment-tracker/': '/bitcoin-tools/tools/stuck-bitcoin-transaction/' },
-  integrations: [sitemap()],
+  // The payment tracker was merged into the stuck-transaction page: see src/pages/tools/bitcoin-payment-tracker.astro.
+  integrations: [sitemap({ filter: (page) => !page.includes('/bitcoin-payment-tracker/') })],
 });

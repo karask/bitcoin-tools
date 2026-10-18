@@ -13,6 +13,8 @@ const { title, description, jsonld = [], current, wide = false } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const year = new Date().getFullYear();
+// Absolute URL for link previews (social crawlers ignore relative paths).
+const ogImage = new URL(base + 'og.png', Astro.site).href;
 ---
 <!doctype html>
 <html lang="en">
@@ -26,6 +28,12 @@ const year = new Date().getFullYear();
   <meta property="og:description" content={description} />
   <meta property="og:type" content="website" />
   <meta property="og:url" content={canonical} />
+  <meta property="og:image" content={ogImage} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Bitcoin Tools — free, plain-English Bitcoin tools. No accounts, no tracking, keys never leave your browser." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content={ogImage} />
   <meta name="theme-color" content="#08090c" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src https://mempool.space; img-src 'self' data:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'self'" />
   <meta name="referrer" content="no-referrer" />

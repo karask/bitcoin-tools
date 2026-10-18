@@ -1,0 +1,26 @@
+---
+// The payment tracker was merged into the stuck-transaction page. GitHub Pages cannot send 301s,
+// so this is a meta-refresh page (noindex + canonical), with share tags so old links still preview.
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+const target = new URL(base + 'tools/stuck-bitcoin-transaction/', Astro.site).href;
+const ogImage = new URL(base + 'og.png', Astro.site).href;
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Redirecting to: {target}</title>
+  <meta http-equiv="refresh" content={`0;url=${target}`} />
+  <meta name="robots" content="noindex" />
+  <link rel="canonical" href={target} />
+  <meta property="og:title" content="Stuck Bitcoin Payment? Payment status & CPFP builder — Bitcoin Tools" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content={target} />
+  <meta property="og:image" content={ogImage} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content={ogImage} />
+</head>
+<body><a href={target}>The payment tracker moved to the stuck-transaction page →</a></body>
+</html>
