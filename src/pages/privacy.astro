@@ -18,6 +18,7 @@ import Base from '../layouts/Base.astro';
       <tr><td>Receive address QR</td><td>Nothing by default. If you enter an amount in USD/EUR, only a price request is sent (not the address)</td><td>Only when using a fiat unit</td></tr>
       <tr><td>Payment request decoder</td><td>Nothing by default. Optional USD/EUR conversion fetches only the price</td><td>Only on the optional price button</td></tr>
       <tr><td>Fee checker</td><td>Request for current fee rates and BTC price</td><td>On page load and on refresh</td></tr>
+      <tr><td>Message verifier</td><td>Nothing — verification is local cryptography</td><td>Never</td></tr>
     </tbody>
   </table>
   <p>Looking up your own addresses or transactions on any public service can link them to your IP address. If that matters to you, use Tor or a VPN, or run your own node with a mempool instance.</p>

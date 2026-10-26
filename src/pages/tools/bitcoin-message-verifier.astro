@@ -1,0 +1,45 @@
+---
+import Tool from '../../layouts/Tool.astro';
+const faq = [
+  { q: 'Does this prove someone owns the coins at that address?', a: 'It proves they control the private key that corresponds to the address, for the exact message that was signed. That is the same key that can spend coins sent there. It does not prove they still hold the coins, that the key was not stolen, or that they agree to anything beyond the signed text.' },
+  { q: 'Does anything leave my browser?', a: 'No. Verification is pure cryptography and runs entirely locally. Nothing is sent to mempool.space or anywhere else. We never ask for a private key or seed.' },
+  { q: 'What signature format is this?', a: 'BIP-137, also called Electrum-style message signing. The signature is 65 bytes of base64. Most desktop wallets’ “Sign message” feature produces this for legacy (1…) and SegWit (bc1q… / 3…) addresses.' },
+  { q: 'Why can’t it check a Taproot (bc1p…) address?', a: 'BIP-137 was never defined for Taproot. Modern Taproot message signing uses BIP-322, which this tool deliberately does not attempt to parse yet. Showing a green tick for the wrong scheme would be worse than refusing.' },
+  { q: 'What about multisig or long bc1q script addresses?', a: 'BIP-137 only covers single-key addresses. A P2WSH (long bc1q…) address, or a multisig behind a 3… address that is not the common wrapped-SegWit form, cannot be checked here. For 3… addresses we only confirm the Electrum-style P2SH-P2WPKH case.' },
+  { q: 'Does the message have to match exactly?', a: 'Yes — every character counts, including spaces and line breaks. The message is hashed as UTF-8. If verification fails, check for an extra space, a different line ending, or a truncated signature.' },
+  { q: 'Can I sign a message here?', a: 'No. This page is verify-only. Signing needs a private key, and this site never asks for keys, seeds or xpubs. Use your wallet’s own “Sign message” feature, then paste the result here to check it.' },
+];
+---
+<Tool slug="bitcoin-message-verifier" title="Bitcoin Message Verifier — check BIP-137 / Electrum signatures (private, in-browser)" description="Verify a Bitcoin signed message against an address. BIP-137 / Electrum for legacy and SegWit. Runs entirely in your browser — no keys, no network." h1="Bitcoin message verifier" lead="Did this signature really come from that address? Paste the address, the message and the signature — checked locally with BIP-137 / Electrum rules." faq={faq}>
+  <Fragment slot="tool">
+    <form id="v-form">
+      <label for="v-addr">Bitcoin address</label>
+      <input id="v-addr" class="mono" placeholder="1… / 3… / bc1q… (Taproot bc1p… not supported yet)" autocomplete="off" spellcheck="false" required />
+      <label for="v-msg" style="margin-top:12px">Message</label>
+      <textarea id="v-msg" rows="4" placeholder="The exact text that was signed" spellcheck="false" required></textarea>
+      <label for="v-sig" style="margin-top:12px">Signature (base64)</label>
+      <textarea id="v-sig" class="mono" rows="3" placeholder="H… / I… / J… / K… (65-byte BIP-137 signature)" spellcheck="false" required></textarea>
+      <div class="row" style="margin-top:14px"><div style="flex:0 1 auto"><button type="submit">Verify</button></div></div>
+    </form>
+    <p class="small muted">🔒 Checked locally. Nothing is sent anywhere. This tool never asks for a private key.</p>
+    <div id="v-result" class="result" aria-live="polite"></div>
+  </Fragment>
+
+  <h2>What a signed Bitcoin message proves</h2>
+  <p>A wallet can <strong>sign</strong> a short piece of text with the private key behind an address, and anyone can later <strong>verify</strong> that signature. If it checks out, the signer controls that address — the same key that can spend coins sent there. People use this to prove a tip jar is theirs, to authenticate a support ticket, or to show they still hold a cold-storage key, without moving any bitcoin.</p>
+  <p>This page only verifies. It never signs, and it never asks for a key or seed. Verification is ordinary public-key cryptography and runs entirely in your browser.</p>
+  <h3>The format: BIP-137 / Electrum</h3>
+  <p>Most wallets that offer “Sign message” follow <strong>BIP-137</strong> (also called Electrum-style signing). The wallet hashes the message with a fixed Bitcoin prefix, signs the hash, and returns 65 bytes of base64. The first byte says which address type was claimed (legacy, wrapped SegWit or native SegWit) and carries the recovery information needed to reconstruct the public key. We recover that key, build the address, and compare it with the one you pasted.</p>
+  <h3>What it does not cover</h3>
+  <ul>
+    <li><strong>Taproot (bc1p…)</strong> — needs BIP-322. We refuse rather than guess.</li>
+    <li><strong>Multisig / P2WSH</strong> — BIP-137 is for single-key addresses only.</li>
+    <li><strong>Other coins’ message formats</strong> — a Dogecoin or BCH signature will not verify here.</li>
+  </ul>
+  <p>A green result means: this signature was produced by the key for this address, over this exact message. It is not a payment, not a contract on its own, and not proof that the coins are still there.</p>
+
+  <Fragment slot="example">
+    <p>Using a well-known BIP-137 test vector: address <code>1PMycacnJaSqwwJqjawXBErnLsZ7RkXUAs</code>, message <code>vires is numeris</code>, signature starting <code>H8JawPtQ…</code>. The verifier reports a match. Change one letter of the message, or swap the address for a different valid one, and it reports no match — and when the signature itself is valid for another address, it shows which address it recovered.</p>
+  </Fragment>
+</Tool>
+<script>import '../../scripts/verify.ts';</script>

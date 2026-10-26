@@ -24,6 +24,7 @@ export const TOOLS: readonly ToolInfo[] = [
   { slug: 'bitcoin-payment-request-decoder', name: 'Payment request decoder', icon: 'invoice', category: 'transactions', local: true, keywords: 'bip21 bolt11 lightning invoice decode uri payment request', blurb: 'Decode a bitcoin: URI or Lightning invoice (BOLT11) into a plain-English summary — entirely offline.' },
   { slug: 'sats-btc-converter', name: 'Sats / BTC / fiat converter', icon: 'convert', category: 'money', local: false, keywords: 'satoshi usd eur dollar euro price historical calculator', blurb: 'Convert between sats, BTC, USD and EUR — today or on any past date.' },
   { slug: 'bitcoin-fee-checker', name: 'Fee checker', icon: 'fee', category: 'money', local: false, keywords: 'sat/vb fee rate estimate mempool cost vbytes', blurb: 'What fee to pay right now to confirm in about 10 minutes, an hour, or a day.' },
+  { slug: 'bitcoin-message-verifier', name: 'Message verifier', icon: 'verify', category: 'keys', local: true, keywords: 'sign verify message signature bip-137 electrum prove ownership bip322', blurb: 'Check that a BIP-137 / Electrum signed message really came from an address — entirely in your browser.' },
 ];
 
 export const COMING_SOON: { name: string; category: CategoryId }[] = [
@@ -31,7 +32,7 @@ export const COMING_SOON: { name: string; category: CategoryId }[] = [
   { name: 'Transaction size calculator', category: 'money' },
   { name: 'Key and address converter', category: 'addresses' },
   { name: 'Script explainer', category: 'keys' },
-  { name: 'Sign and verify message', category: 'keys' },
+  { name: 'Sign message (wallet-side)', category: 'keys' },
 ];
 
 /** Categories that have at least one live tool, each with its tools in toolbox order. */
