@@ -54,14 +54,20 @@ describe('valid BIP-137 verify (bitcoinjs fixtures)', () => {
 
 describe('negative cases', () => {
   const f = FIXTURES[1];
-  it('wrong message → no', () => {
+  it('wrong message → no, soft mismatch wording (no "made for")', () => {
     const r = verifyMessage(f.address, f.message + '!', f.signature);
     expect(r.verdict).toBe('no');
+    expect(r.reason).toMatch(/recovers to/i);
+    expect(r.reason).toMatch(/does not prove control/i);
+    expect(r.reason).not.toMatch(/made for/i);
   });
   it('wrong address → no, and shows recovered address', () => {
     const r = verifyMessage('1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH', f.message, f.signature);
     expect(r.verdict).toBe('no');
     expect(r.recoveredAddress).toBe(f.address);
+    expect(r.reason).toMatch(/recovers to/i);
+    expect(r.reason).toMatch(/does not prove control/i);
+    expect(r.reason).not.toMatch(/made for/i);
   });
   it('malformed base64 → cant-check', () => {
     expect(verifyMessage(f.address, f.message, '%%%not-base64%%%').verdict).toBe('cant-check');

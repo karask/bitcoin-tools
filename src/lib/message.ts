@@ -195,8 +195,8 @@ export function verifyMessage(address: string, message: string, signature: strin
     verdict: 'no',
     title: 'Signature does not match this address',
     reason: typeMismatch
-      ? `The signature is a valid BIP-137 signature for a ${headerSays}, which recovers to ${recoveredAddress}, not the address you entered. The message text may also differ. A match requires the same address, the same exact message, and a signature produced for that pair.`
-      : `The signature is cryptographically valid, but it was made for a different address (${recoveredAddress}). It does not prove control of ${claimed}.`,
+      ? `Under this message the signature recovers to ${recoveredAddress} (header claims a ${headerSays}), not the address you entered. That does not prove control of ${claimed}. A match needs the same address, the same exact message, and a BIP-137 signature for that pair — the message text or address type may differ.`
+      : `Under this message the signature recovers to a different address (${recoveredAddress}). That does not prove control of ${claimed}.`,
     addressType: addr.type, signatureType: sig.type, recoveredAddress, network: addr.network,
   };
 }
